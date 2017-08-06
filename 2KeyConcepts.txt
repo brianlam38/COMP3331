@@ -1,0 +1,147 @@
+Two Key Concepts in Networking
+==============================
+
+For related slides, see CSE461 Winter 2003 lectures 1 and 2.
+
+1. Statistical Multiplexing
+---------------------------
+
+Q: Why do we build networks?
+
+A1: Remote communication (tele == at a distance). But individual
+communications links would serve as well as a network.
+
+A2: The greater value of increased connectivity. Metcalfe's "law" is that
+the value of a network is proportional to the square of the number of
+users, since they can all interact with each other. This is a network
+effect or (positive) externality or network externality in economics.
+
+A3: For cost-effective resource sharing.  Since not everyone will be using
+the network at once in many cases we can imagine, then we can benefit by
+sharing its resources. This is called statistical multiplexing.
+Multiplexing == sharing. Statistical multiplexing == sharing using the
+statistics of demand. It allows us to build a network for the high-end of
+the expected case rather than the worst case (much cheaper) at the cost of
+occasionally being oversubscribed.
+
+Example: A user wants 1Mbps of bandwidth 10% of the time to surf the web.
+(See slides). Draw PDF for one user, two independent users, etc. For N
+users this is simply a binomial expansion. [You could easily use MatLab to
+plot this.] The Central Limit Theorem (CLT) says that as N grows large,
+the demand will rapidly (exponentially fast) die off over the expected
+value. This holds for all distributions with finite variance. In this case
+we see that we can support 35 users with 10Mbps of bandwidth with a very
+small chance of being oversubscribed -- a network that is 3.5X smaller and
+cheaper.
+
+Statistical multiplexing is a key concept in data networks because traffic
+is bursty (meaning that the peak usage is >> the average usage). How often
+is your  access link at home idle or very low usage? Probably much more
+than 90% of the time.
+
+Q: When doesn't statistical multiplexing work well?
+
+A1: If each user wants to transmit all of the time --  radio/TV stations
+are allocated a dedicated frequency band, they are not statistically
+multiplexed.
+
+A2: If demand is dependent. This might be a flash crowd, diurnal (daily)
+activity, or it might be packet transmissions that are related nearby in
+time over some scale. Later in the quarter we will see an example of
+bursts where packet activity is related (self-similarity, or "heavy-tailed
+bursts" of activity) over some timescales. This was a shocking discovery
+in the 1990s: because heavy-tailed phenomena have infinite variance the
+standard CLT does not apply and aggregating packet traffic makes it more
+bursty rather than more smooth. Thus traffic does not become smooth until
+larger timescales (over which there is no self-similarity) than had been
+expected (if there were no self-similarity). [I'm fairly sure all this is
+right, but I'm not an expert.]
+
+How we use statistical multiplexing in the Internet. Now draw a picture of
+a switch/router with multiple inputs and one output and explain packet
+switching: packets arrive on the inputs and are relayed to the output; we
+rely on undersubscription on average (the sum of the input rates is less
+than the output rate) and the statistics of their arrival to make the
+system work, adding a small amount of buffering to handle the case when
+packets arrive on more than one input at the same time. Note that all
+lines are really input/output, it's just that we oten draw inputs on the
+left and outputs on the right for convenience.
+
+Q: Is statistical multiplexing the same as packet switching?
+
+A: No. Statistical multiplexing is used in the telephone system too, which
+is based on circuit switching (where bandwidth  resources are reserved for
+a complete telephone circuit for the duration of a call). In that case, it
+is the number of calls that is aggregated using statistics as we go deeper
+into the core of the network and away from the edges. Nonetheless,
+statistical multiplexing has come to be associated with packet switching
+because packet switching makes use of it at a fine granularity. There are
+other advantages to packet switching however, the foremost probably being
+rate adaptation: assuming a reasonable allocation of resources between
+competing inputs when the output is oversubscribed, packet switching will
+gracefully allow communication between access links of any capacity, and
+can accommodate more users by giving each a smaller share, ie., we all get
+to download from that Web server, regardless of the size of our access
+line, and the fewer users the more bandwidth we can get. Circuit switching
+comes in fixed sizes of necessity.
+
+2. Protocols and Layering.
+--------------------------
+
+Q: The Internet is comprised of many functions (routing, reliability,
+naming/addressing, etc.). How should we best organize all this
+functionality (think software, but it could be implemented in hardware too
+-- routers)? What is the equivalent of modules in software engineering for
+the Internet?
+
+A: That is probably an open question, but the ubiquitous organizing
+principle is layering (stacking) of protocols (modules).
+
+Now explain layering. The basic motivation is as follows: My computer
+should not need to know (or have software) that is specific to whether
+your computer across the Internet is attached via cable, DSL or 802.11.
+[Imagine if it did for a moment -- I would need to upgrade software to
+talk to people when they upgrade to WiMax! I would never keep track of all
+this!] So the implementation details of your access link (and mine) are
+hidden below an interface -- they present an IP interface to higher
+protocol layers. Similarly, the packet switching devices in the Internet
+(routers) should not need to know what applications (VoIP, Web, P2P) we
+are running on our computers. Or they would need to be upgraded when we
+come up with a new application! So the end host applications present an
+interface to IP, and routers can work solely in terms of IP packets.
+
+Exercise: Draw a figure of layered protocol stacks connecting hosts on
+different link layers. Show what packets look like as they move through
+this system, how headers are added and subtracted and what layer is
+logically talking to what other layer.
+
+Points to note:
+
+1. The Internet is not entirely layered. Boxes inside the network that
+examine application traffic are one example of ways in which the strictly
+layered model is relaxed when there is a tension, e.g., firewalls or IDS
+want to examine what kind of traffic it is, and within the network at a
+defense perimeter. This is known as a layer violation.
+
+2. The layered model of the Internet with four rough groupings was
+rationalized afterwards, rather than carefully designed ahead of time. It
+draws on the OSI layered model, which has seven defined layers. You can
+see that it is not strict in several ways, e.g., TCP is always found
+implemented with IP.
+
+3. Layering has disadvantages as well as advantages. What are they? The
+principle one is information hiding, e.g., if layers are separate, how can
+the one above know what size packets will be accepted by the one below?
+This typically leads to additional machinery. Layering with its strict
+communication paths is not always a good fit to the task at hand, e.g.,
+management, routing.
+
+4. There can be multiple choices at each layer, e.g., TCP and UDP, and
+more generally packets are routed through a protocol graph. Actually,
+there are more protocols standardized for the Internet by the IETF than
+you can point a stick at. So the implementation of layering requires
+information at layer N to select the right module at layer N+1, e.g., IP
+has a protocol field saying what protocol should be used to interpret the
+packet contents. This information is called a demultiplexing key.
+
+That's all folks.
