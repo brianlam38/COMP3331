@@ -1,4 +1,5 @@
 import sys
+
 total = len(sys.argv)
 cmdargs = str(sys.argv)
 
@@ -15,4 +16,4 @@ sentence = raw_input('Input lowercase sentence:')	# grab client input
 clientSocket.send(sentence)							# transmits data to server
 modifiedSentence = clientSocket.recv(1024)			# receives data from server
 print 'From Server:', modifiedSentence
-clientSocket.close()								# closes the socket
+clientSocket.close()								# close the socket

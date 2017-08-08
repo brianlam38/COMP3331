@@ -1,13 +1,16 @@
 from socket import *
+
 serverPort = 12000 # change port number if required
 serverSocket = socket(AF_INET, SOCK_STREAM)				# create socket for client
-serverSocket.bind(('', serverPort))
-serverSocket.listen(1)
-print "The server is ready to receive"
-while 1:
-    connectionSocket, addr = serverSocket.accept()
-    sentence = connectionSocket.recv(1024)				# receive TCP message
-    capitalizedSentence = sentence.upper()
-    connectionSocket.send(capitalizedSentence)
-    connectionSocket.close()
+serverSocket.bind(('', serverPort))						# binds address (hostname, port numer) to socket
+serverSocket.listen(1)									# Listen / wait for connections made to the socket
+print "The server is ready to receive"						# Arg = max no. of queued connections
 
+while 1:
+    connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection. Waiting until connection arrives.
+    sentence = connectionSocket.recv(1024)				# receives data from client
+
+    capitalizedSentence = sentence.upper()				# manipulates data
+    
+    connectionSocket.send(capitalizedSentence)			# transmits data to client
+    connectionSocket.close()							# close the socket
