@@ -7,10 +7,12 @@ serverSocket.listen(1)									# Listen / wait for connections made to the socke
 print "The server is ready to receive"						# Arg = max no. of queued connections
 
 while 1:
-    connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection. Waiting until connection arrives.
+    connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection
+    														# Waiting until connection arrives
+    														# New socket created on return
     sentence = connectionSocket.recv(1024)				# receives data from client
 
     capitalizedSentence = sentence.upper()				# manipulates data
-    
+
     connectionSocket.send(capitalizedSentence)			# transmits data to client
     connectionSocket.close()							# close the socket
