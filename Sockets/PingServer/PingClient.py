@@ -1,5 +1,4 @@
 """
-
 # TCP CLIENT PROGRAM
 
 import sys
@@ -22,7 +21,6 @@ clientSocket.send(sentence)							# transmits data to server
 modifiedSentence = clientSocket.recv(1024)			# receives data from server
 print 'From Server:', modifiedSentence
 clientSocket.close()								# close the socket
-
 """
 
 # UDP CLIENT PROGRAM
