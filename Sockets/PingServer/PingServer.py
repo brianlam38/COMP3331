@@ -1,4 +1,4 @@
-# UDP server program
+# PING SERVER PROGRAM
 
 from socket import *
 
