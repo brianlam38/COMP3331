@@ -32,8 +32,11 @@ serverSocket.bind(('', serverPort))
 print "The server is ready to receive"
 
 while 1:
-	message, clientAddress = serverSocket.recvFrom(2048)
+	message, clientAddress = serverSocket.recvFrom(1048)
 	modifiedMessage = message.upper()
+	# UDP has no "connection socket" between client / server
+	# sender explicitly attaches IP destination address and port no. to each packet
+	# receiver extracts sender IP address and port no. from received packet
 	serverSocket.sendto(modifiedMessage, clientAddress)
 
 

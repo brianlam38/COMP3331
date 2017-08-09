@@ -25,17 +25,22 @@ clientSocket.close()								# close the socket
 
 # UDP CLIENT PROGRAM
 
+import sys
+
+total = len(sys.argv)
+cmdargs = str(sys.argv)
+
 from socket import *
 
 serverName = 'hostname'
 serverPort = 12000 # change port number if required
 
-clientSocket = socket(socket.AF_INET, socket.SOCK_DGRAM)
+clientSocket = socket(AF_INET, SOCK_DGRAM)
 message = raw_input('Input sentence:')
 
-clientSocket.send(sentence)							# transmits data to server
-modifiedSentence = clientSocket.recv(1024)			# receives data from server
-print 'From Server:', modifiedSentence
+clientSocket.sendto(message, (serverName, serverPort))		# transmits data to server
+modifiedMessage, serverAddress = clientSocket.recv(2048)	# receives data from server
+print 'From Server:', modifiedMessage
 clientSocket.close()
 
 
