@@ -2,6 +2,10 @@
 #
 # This is a client-side program for making ping requests to a server
 #
+# UDP CLIENT PROGRAM
+#
+# This is the client-side program to
+# send requests to the server.
 
 import sys
 

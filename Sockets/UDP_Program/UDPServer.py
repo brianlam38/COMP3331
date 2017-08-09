@@ -1,4 +1,7 @@
-# UDP server program
+# UDP SERVER PROGRAM
+#
+# This is the server-side program to
+# receive requests from the sender.
 
 from socket import *
 
