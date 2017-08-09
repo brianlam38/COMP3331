@@ -1,7 +1,6 @@
 # PING CLIENT PROGRAM
 #
-# This is a client-side program makes ping requests
-# to the server.
+# This is a client-side program makes ping requests to the server.
 
 import sys
 
@@ -9,37 +8,25 @@ total = len(sys.argv)
 cmdargs = str(sys.argv)
 
 from socket import *
-from time import sleep
-import datetime
+import time
 
-serverName = '127.0.0.1'
-serverPort = 12000 # change port number if required
+server_name = '127.0.0.1'
+server_port = 12000 # change port number if required
+client_socket = socket(AF_INET, SOCK_DGRAM)
 
-clientSocket = socket(AF_INET, SOCK_DGRAM)
+seq_num = 0
+while seq_num < 10:
+	send_time = time.time()									# transmit time
+	ping = 'Ping to ' + server_name + ', seq = ' + str(seq_num) + ', '  + str(send_time)
+	client_socket.sendto(ping, (server_name, server_port))	# transmit data to server
+	time.sleep(1)											# wait 1
+										
+	reply, server_address = client_socket.recvfrom(2048)	# receive data from server
+	recv_time = time.time()									# receive time
 
-while 1:
-	sequenceNum = str(0)
-	timeStamp = '{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
-	ping = 'PING ' + sequenceNum + timeStamp
-	print ping
-	clientSocket.sendto(ping, (serverName, serverPort))			# transmits data to server
-	modifiedMessage, serverAddress = clientSocket.recvfrom(2048)	# receives data from server
+	RTT = round(recv_time - send_time, 3)					# calculate RTT
+	print 'From server: ', reply
+	seq_num += 1
 
-
-print 'From Server:', modifiedMessage
-clientSocket.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+client_socket.close()
 
