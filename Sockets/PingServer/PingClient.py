@@ -20,7 +20,9 @@ while seq_num < 10:
 	# transmit data to server, receive from server
 	try:
 		send_time = time.time()
-		ping = 'Ping to ' + server_name + ', seq = ' + str(seq_num) + str(send_time)
+		timestamp = str(send_time)
+		#ping = 'Ping to ' + server_name + ', seq = ' + str(seq_num) + ', ' + timestamp
+		ping = 'PING ' + str(seq_num) + ' ' + timestamp + ' \r\n'
 		client_socket.sendto(ping, (server_name, server_port))
 		reply, server_address = client_socket.recvfrom(2048)
 		recv_time = time.time()
@@ -32,7 +34,7 @@ while seq_num < 10:
 		continue
 	# calculate RTT, print server response with RTT
 	RTT = round(recv_time - send_time, 3) * 1000
-	print reply[0:26] + ', rtt =', RTT, 'ms'
+	print 'Ping to ' + server_name + ', seq = ' + str(reply[5]) + ', rtt = ' +  str(RTT) + 'ms'
 	seq_num += 1
 
 client_socket.close()
