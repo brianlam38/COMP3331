@@ -31,18 +31,19 @@ while 1:
 																# New socket created on return
 		request = connectionSocket.recv(1024)				# receives get request from client
 
-		file = request.split(" ");							# parse get request
-		file = file[1]											# grab file name
-		file = file.replace('/', '')							# remove slash
-		print file										
+		file_name = request.split(" ");						# parse get request
+		file_name = file_name[1]								# grab file name
+		file_name = file_name.replace('/', '')					# remove slash
+		print file_name										
 
-		file = open(file)									# get the requested file from file system
+		file = open(file_name)								# get the requested file from file system
 		connectionSocket.send('\nHTTP/1.1 200 OK\n\n')		# send header lines
-		connectionSocket.send('lol')						# send HTTP response message to client
+		connectionSocket.send(file.read())					# send HTTP response message to client
 	# IO Exception
 	except IOError:
 		print '404 not found'
-		connectionSocket.close()									# close the socket
+
+connectionSocket.close()									# close the socket
 
 
 
