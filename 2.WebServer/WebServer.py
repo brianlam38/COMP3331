@@ -32,11 +32,12 @@ while 1:
 
 		message = request.split()[1];						# parse get request
 		file_name = message.replace('/', '')					# remove slash
-		print file_name, '\n\n'								
+		print file_name, '\n'								
 
-		file = open(file_name)								# get the requested file from file system
-		connectionSocket.send('HTTP/1.1 200 OK\n\n')		# send header line
-		connectionSocket.send(file.read())					# send HTTP response message to client
+		file = open(file_name)								# open file
+		http_output = file.read()							# read file, store as text / string
+		connectionSocket.send('HTTP/1.1 200 OK\n\n')		# send HTTP header response
+		connectionSocket.send(http_output)					# send HTTP text reponse
 		connectionSocket.close()
 	# IO Exception
 	except IOError:
