@@ -18,16 +18,14 @@
 from socket import *
 
 serverPort = 12000
-serverSocket = socket(AF_INET, SOCK_STREAM)				# create socket for client
-serverSocket.bind(('', serverPort))						# binds address (hostname, port numer) to socket
-serverSocket.listen(1)									# Listen / wait for connections made to the socket
-print "The server is ready to receive\n"				#		Arg 1 = max no. queued connections
+serverSocket = socket(AF_INET, SOCK_STREAM)					# create socket for client
+serverSocket.bind(('', serverPort))							# binds address (hostname, port numer) to socket
+serverSocket.listen(1)											# Listen / wait for connections made to the socket
+print "The server is ready to receive\n"						# Arg 1 = max no. queued connections
 
 while 1:
 	print "Ready to serve"
-	connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection
-																# Waiting until connection arrives
-																# New socket created on return
+	connectionSocket, addr = serverSocket.accept()			# passively accepts TCP client connection
 	# Receive and send client requests
 	try:
 		request = connectionSocket.recv(1024)				# receives get request from client
@@ -37,14 +35,16 @@ while 1:
 		print file_name, '\n\n'								
 
 		file = open(file_name)								# get the requested file from file system
-		connectionSocket.send('\nHTTP/1.1 200 OK\n\n')		# send header line
+		connectionSocket.send('HTTP/1.1 200 OK\n\n')		# send header line
 		connectionSocket.send(file.read())					# send HTTP response message to client
+		connectionSocket.close()
 	# IO Exception
-	except Exception:
-		connectionSocket, addr = serverSocket.accept()
-		connectionSocket.send('404 not found')
+	except IOError:
+		connectionSocket.send('HTTP/1.1 404 File not found\n\n')
+		connectionSocket.send('<h1><center>404 Error: File not found</center></h1>')
+		connectionSocket.close()
 
-connectionSocket.close()									# close the socket
+
 
 
 
