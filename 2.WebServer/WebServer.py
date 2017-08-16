@@ -18,19 +18,27 @@
 from socket import *
 
 serverPort = 12000
-serverSocket = socket(AF_INET, SOCK_STREAM)		# create socket for client
-serverSocket.bind(('', serverPort))				# binds address (hostname, port numer) to socket
-serverSocoket.listen(1)							# Listen / wait for connections made to the socket
-print "The server is ready to receive\n"		#		Arg 1 = max no. queued connections
+serverSocket = socket(AF_INET, SOCK_STREAM)				# create socket for client
+serverSocket.bind(('', serverPort))						# binds address (hostname, port numer) to socket
+serverSocket.listen(1)									# Listen / wait for connections made to the socket
+print "The server is ready to receive\n"				#		Arg 1 = max no. queued connections
 
 while 1:
 	connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection
-    														# Waiting until connection arrives
-    														# New socket created on return
-    sentence = connectionSocket.recv(1024)				# receives data from client
-    capitalizedSentence = sentence.upper()				# manipulates data
-    connectionSocket.send(capitalizedSentence)			# transmits data to client
-    connectionSocket.close()							# close the socket
+															# Waiting until connection arrives
+															# New socket created on return
+	request = connectionSocket.recv(1024)				# receives get request from client
+
+	file = request.split(" ");							# parse get request
+	file = file[1]											# grab file name
+	file = file.replace('/', '')							# remove slash
+	print file										
+
+	file = open(file)									# get the requested file from file system
+
+	connectionSocket.send('\nHTTP/1.1 200 OK\n\n')		# send header lines
+	connectionSocket.send(file)							# send HTTP response message to client
+	connectionSocket.close()							# close the socket
 
 
 
