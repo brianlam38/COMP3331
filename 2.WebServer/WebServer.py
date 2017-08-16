@@ -24,21 +24,28 @@ serverSocket.listen(1)									# Listen / wait for connections made to the socke
 print "The server is ready to receive\n"				#		Arg 1 = max no. queued connections
 
 while 1:
-	connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection
-															# Waiting until connection arrives
-															# New socket created on return
-	request = connectionSocket.recv(1024)				# receives get request from client
+	# Receive and send client requests
+	try:
+		connectionSocket, addr = serverSocket.accept()		# passively accepts TCP client connection
+																# Waiting until connection arrives
+																# New socket created on return
+		request = connectionSocket.recv(1024)				# receives get request from client
 
-	file = request.split(" ");							# parse get request
-	file = file[1]											# grab file name
-	file = file.replace('/', '')							# remove slash
-	print file										
+		file = request.split(" ");							# parse get request
+		file = file[1]											# grab file name
+		file = file.replace('/', '')							# remove slash
+		print file										
 
-	file = open(file)									# get the requested file from file system
+		file = open(file)									# get the requested file from file system
+		connectionSocket.send('\nHTTP/1.1 200 OK\n\n')		# send header lines
+		connectionSocket.send('lol')						# send HTTP response message to client
+	# IO Exception
+	except IOError:
+		print '404 not found'
+		connectionSocket.close()									# close the socket
 
-	connectionSocket.send('\nHTTP/1.1 200 OK\n\n')		# send header lines
-	connectionSocket.send(file)							# send HTTP response message to client
-	connectionSocket.close()							# close the socket
+
+
 
 
 
