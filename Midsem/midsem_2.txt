@@ -1,0 +1,60 @@
+Q1.)
+HTTP request with an “if-modified” header.
+
+If object in a server has not changed since last retrieval by the client, then server will send a “304 Not Modified” response.
+
+304 Not Modified response is for caching purposes.
+Tells client that the response has not been modified, so the client can use the cached version of the response.
+
+Q2.)
+Local DNS name servers.
+
+DNS = Domain Name System: The hierarchy of Name Servers that translates host names into IP addresses on a global scale.
+Name Server = Hosts or caches these translations.
+
+DNS Queries can be resolved in a number of ways:
+1. A client can answer a query locally by using cached information obtained from a prev query.
+2. A DNS server can use its own cache of resource records to answer a query.
+3. A DNS server can query other DNS servers on behalf of the requesting client to resolve the name, then send an answer back to the client (RECURSION)
+4. The client itself can attempt to contact additional DNS servers to resolve a name. This is done by using separate and additional queries based on referral answers from servers. (ITERATION)
+
+Q3.)
+
+Q4.)
+u_s = 10Mbps
+u_i = 1Mbps
+d_i = 10Mbps
+
+n = 100 people
+F = 100,000,000 bits
+
+Min distribution time = MAX { F/u_s , F/d_i , N*F / (u_s + sum(u_i)) }
+= MAX { 100,000,000 / 10,000,000 | 100,000,000 / 10,000,000 | (100 * 100,000,000) / (10,000,000 + (1,000,000 * 100) ) }
+= MAX { 10 | 10 | (10,000,000,000 / (10,000,000 + 100,000,000) ) }
+= MAX { 10 | 10 | 10,000,000,000 / 110,000,000 }
+= MAX { 10 | 10 | 90.9 }
+Therefore, min distribution time = 90.9 seconds = ~100 seconds
+
+Q5.) BitTorrent
+
+Q6.)
+10 connections traverse link at 10Gbps
+Client access link = 5Mbps
+Maximum throughput for each connection = 100Mbps (T or F?)
+
+ANS:
+10,000mbps link / 10 connections = 1,000mbps per connection
+1,000Mbps / 5Mbps = 200Mbps
+Therefore the suggested answer is FALSE.
+
+Q7.)
+Transmission rate = R
+Packet arrives to queue every 1/a seconds
+Packet length = L
+
+
+
+
+
+
+
