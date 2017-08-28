@@ -1,11 +1,27 @@
-39Mb MP3 file from src -> dest
+390Mb MP3 file from src -> dest
 
 All links have transmission rate = 10Mbps
-Propagation = 2 * 10^8 meters / sec = 2,000,000,000m per sec = 2,000,000km per sec
+Propagation = 2 * 10^8 meters / sec = 200,000,000m per sec = 200,000km per sec
 Distance between src —> dest = 10,000km
 
 Q1.)
-Transmission = L (size of packet) / R (transmission rate) = 39,000bits / 10,000bps = 3.9 bits per sec
-Propagation = d (physical distance) / s (propagation speed) = 10,000km / 2,000,000kmps = 0.005secs = 5ms
+Transmission = L (size of packet) / R (transmission rate) = 30,000,000bits / 10,000,000bps = 3sec
+Propagation = d (physical distance) / s (propagation speed) = 10,000km / 200,000kmps = 0.05secs = 50ms
 
-Therefore
+Therefore,
+Time taken to transmit all 30,000,000bits on the wire = 3seconds = 3,000ms
+Time taken to propagate bit to the dest = 50ms
+
+If it takes 3,000ms to transmit 30,000,000 bits on the wire, in 50ms there should be:
+30,000,000bits / 3,000ms = 10,000 bits per ms
+There 10,000bits * 50ms = 500,000 bits transmitted on the wire by then.
+
+Q2.)
+Two links, each 5,000km long.
+A ——5000—> ROUTER ——5000——> B
+
+end-to-end = N * (proc + queue + trans + prop)
+= 2 * (3 + 0.025)
+= 6.05 seconds
+
+Q3.)
