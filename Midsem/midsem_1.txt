@@ -1,4 +1,4 @@
-390Mb MP3 file from src -> dest
+30Mb MP3 file from src -> dest
 
 All links have transmission rate = 10Mbps
 Propagation = 2 * 10^8 meters / sec = 200,000,000m per sec = 200,000km per sec
@@ -25,3 +25,10 @@ end-to-end = N * (proc + queue + trans + prop)
 = 6.05 seconds
 
 Q3.)
+10 FDM channels
+Transmission rate of one channel = 10Mbps / 10 = 1Mbps per channel
+d_trans = L/R = 30Mb / 1 = 30sec per channel
+
+d_prop = d/s = 10,000km / 200,000km = 0.05 seconds
+
+Therefore end-to-end delay = 30 seconds + 0.05 seconds = 30.05 seconds
