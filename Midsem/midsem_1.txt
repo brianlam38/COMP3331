@@ -1,0 +1,11 @@
+39Mb MP3 file from src -> dest
+
+All links have transmission rate = 10Mbps
+Propagation = 2 * 10^8 meters / sec = 2,000,000,000m per sec = 2,000,000km per sec
+Distance between src —> dest = 10,000km
+
+Q1.)
+Transmission = L (size of packet) / R (transmission rate) = 39,000bits / 10,000bps = 3.9 bits per sec
+Propagation = d (physical distance) / s (propagation speed) = 10,000km / 2,000,000kmps = 0.005secs = 5ms
+
+Therefore
