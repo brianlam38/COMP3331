@@ -1,3 +1,7 @@
+
+NOTE: REVIEW 3.4 | 3.5.4 | 3.5.6
+
+
 # Reliable Data Transfer
 
 IP does not guarantee:
@@ -48,24 +52,6 @@ On occurence of event:
    If 'y > SendBase' then ACK is acknowledging one or more previously unacknowledged segments.
    Thus, sender updates its 'SendBase' var.
    It also restarts the timer if there currently arent any not yet acknowledged segments
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

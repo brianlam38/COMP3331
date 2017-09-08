@@ -18,9 +18,16 @@ QUIC 'Quick UDP Internet Connection'
 -> However, this wouldnt be suitable for requesting a website because you cant guarantee
    that all the data would make it.
 
-TCP
--> Typically 2 or 3 roundtrips before the browser can atually start receiving data 'handshake'
--> 
+--------
+
+Basic setup of the assignment:
+-> File is to be transferred from the Sender to the Receiver.
+-> Sender will run on the sender-side while Receiver runs on the receiver-side.
+-> Note: data segments will flow from the sender to the receiver, while ACK segments will flow
+   from the receiver to the sender.
+
+TWO VERSIONS: Standard + Extended
+
 
 
 
