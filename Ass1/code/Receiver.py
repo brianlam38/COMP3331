@@ -41,35 +41,38 @@ class Receiver:
 
 	socket = socket(AF_INET, SOCK_DGRAM)
 
+	# receive packet from sender
 	def stp_rcv(self):
 		self.socket.bind(('', self.port))
 		data, addr = self.socket.recvfrom(2048)   # extracts sender IP and port number
 		stp_packet = pickle.loads(data)			  # converts data back to packet
-		#print(stp_packet)
 		return stp_packet
 
 	# FIN close
 	def stp_close(self):
 		self.socket.close()
 
-	def parse_data(self, packet):
+	# grab payload from packet
+	def get_data(self, packet):
 		data = stp_packet.data
 		return data
 
+	# append packet data to single receiver txt file
 	def stp_append(self, data):
 		f = open("r_test.txt", "a+")
 		f.write(data)
 		f.close()
 
+	# receiver send a packet to sender (ACKS, NAKS etc.)
 	def stp_send(self, packet):
 		# sender explicitly attaches IP destination address and port no. to each packet
 		self.socket.sendto(pickle.dumps(stp_packet), (self.r_host_ip, self.r_port))
 		#return_msg, server_add = socket.recvfrom(2048)	# receives data from server
 		self.socket.close()
 
-	# receive packet
-	#data, addr = socket.recvfrom(4096)
-	#stp_packet = pickle.loads(data)
+###################
+# MAIN FUNCTION???
+###################
 
 num_args = 3
 if len(sys.argv) != num_args:				# check num args
@@ -81,7 +84,7 @@ else:
 	# waiting for file from sender
 	while True:
 		stp_packet = receiver.stp_rcv()  		# receive packet
-		data = receiver.parse_data(stp_packet)  # obtain payload from packet
+		data = receiver.get_data(stp_packet)  # obtain payload from packet
 		receiver.stp_append(data)		 		# append packet data to r_file.txt
 		break
 	# everything finished -> close connection
