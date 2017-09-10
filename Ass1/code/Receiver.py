@@ -1,11 +1,54 @@
 # Simple Transport Protocol (STP)
 #
 # Receiving side program
-# 
-# Three major components to data transmission and re-transmission:
-# 1. Data received from app layer above
-# 2. Timer timeout
-# 3. ACK receipt
+
+# Sender -> Packet (seq = 10) -> Receiver
+# if match seq number
+# 		keep packet
+#		send back ACK indicating next packet with 10 + len(data)
+# else
+#		discard packet (or buffer)
+
+# Example: Sender
+# (seq 1) get ACK 11 -> send which packet to repeat
+# (seq 11)
+# (seq 21)
+
+
+class Receiver:
+	# you need to create this
+	# receiver needs to have a sequence number so it can deal with out-of-order pakes
+	# receiver receives stp_packet and then writes the data inside the packet
+
+# receive packet
+import pickle
+data, addr = socket.recvfrom(4096)
+stp_packet = pickle.loads(data)
+
+# after receiving packet
+received_seq_num = stp_packet.seq_num
+
+# on receive
+# The receiver should generate ACK immediately after receiving a data segment
+self.timer.cancel()
+
+'''
+The receiver is expected to buffer out-of-order arrival packets.
+ The receiver should first open a UDP listening socket on receiver_port and then wait for segments to arrive from the Sender.
+ The first segment to be sent by the Sender is a SYN segment and the receiver is expected to reply a SYNACK segment.
+ After the completion of the three-way handshake, the receiver should create a new text file called file.txt.
+ All incoming data should be stored in this file.
+ The Receiver should first extract the STP packet from the arriving UDP datagrams and then extract the data (i.e. payload) from the STP packet.
+ Note that, the Receiver is allowed to examine the header of the UDP datagram that encapsulates the STP Packet to determine the UDP port and IP address that the Sender is using.
+ The data should be written into file.txt.
+At the end of the transfer, the Receiver should have a duplicate of the text file sent by the Sender.
+ You can verify this by using the diff command on a Linux machine (diff file1.txt file2.txt).
+ The Receiver should also maintain a log file titled Receiver_log.txt where it records the information about each segment that it sends and receives.
+ The format should be exactly similar to the sender log file as outlined in the Sender specification.
+The Receiver should terminate after the connection closure procedure initiated by the sender concludes.
+The Receiver should also print the following statistics at the end of the log file (i.e. Receiver_log.txt):
+'''
+
 
 # 1. Sender waits for data to be passed down from app layer
 # 		wait()
