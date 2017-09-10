@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Simple Transport Protocol (STP)
 #
 # Receiving side program
@@ -14,23 +16,58 @@
 # (seq 11)
 # (seq 21)
 
+import pickle
+from socket import *
+
+class STPPacket:
+	def __init__(self, data, seq_num, ack_num, ack=False, syn=False, fin=False):
+		self.data = data
+		self.seq_num = seq_num
+		self.ack_num = ack_num
+		self.ack = ack
+		self.syn = syn
+		self.fin = fin
 
 class Receiver:
 	# you need to create this
 	# receiver needs to have a sequence number so it can deal with out-of-order pakes
 	# receiver receives stp_packet and then writes the data inside the packet
 
-# receive packet
-import pickle
-data, addr = socket.recvfrom(4096)
-stp_packet = pickle.loads(data)
+	port = 4096
+	socket = socket(AF_INET, SOCK_DGRAM)
+	socket.bind(('', port))
+	print("The server is ready to receive")
+
+	while 1:
+		data, addr = socket.recvfrom(2048)   # extracts sender IP and port number
+		stp_packet = pickle.loads(data)
+		print(data)
+		socket.sendto(data, addr)
+
+
+	#def stp_rcv(self, packet):
+	#	print("data received")
+
+
+	#def stp_rcv(self, packet)
+
+
+	# receive packet
+	#data, addr = socket.recvfrom(4096)
+	#stp_packet = pickle.loads(data)
+
+
+x = Receiver()
+#x.stp_rcv()
+
+
 
 # after receiving packet
-received_seq_num = stp_packet.seq_num
+#received_seq_num = stp_packet.seq_num
 
 # on receive
 # The receiver should generate ACK immediately after receiving a data segment
-self.timer.cancel()
+#self.timer.cancel()
 
 '''
 The receiver is expected to buffer out-of-order arrival packets.
@@ -57,7 +94,7 @@ The Receiver should also print the following statistics at the end of the log fi
 # 		stp_send(data)
 # 4. send packet via. udp_send
 # 		udp_send()
-
+'''
 # On packet arrival, receiver replies with ACK/NAK depending on if packet is corrupted
 Corrupted = stp_rcv(rcvpkt) && corrupt()
 #     -> send NAK packet via. udp_send()
@@ -75,6 +112,7 @@ udt_send()
 
 
 
+
 # wait for ACK packet -> ACK comes back
 # if waiting, can't receive more data from app layer = stp_send() can't occur
 # if ACK, go back to waiting for data from app layer
@@ -86,8 +124,7 @@ stp_rcv(rcvpkt) && isACK
 # if NAK, retransmit last packet + wait for ACK again
 stp_rcv(rcvpkt) && isNAK
 
-
-
+'''
 
 
 
