@@ -1,0 +1,53 @@
+Sender -> seq = 10 -> Receiver ? match rec seq-num ? good (keep packet) : otherwise, discard packet (or buffer) -> send back ack with ack number 10 (seq is number of thing it's expecting)
+if good, Receiver sends Sender an ack indicating next packet with number 10 + len(data)
+sender also needs sequence number
+Sender
+1: sq 1 get ack 11 -> send which packet to repeat ( if needed)
+2: seq 11
+3: seq 21
+
+store? use a dict
+dict = {}
+dict[seq_number] = stp_packet
+use pickle -> serialize
+#send
+import pickle
+stp_packet = STPPacket(data, ...)
+socket.sendto(pickle.dumps(stp_packet). (client_ip, client_port)
+
+#receive
+import pickle
+data, addr = socket.recvfrom(4096)
+stp_packet = pickle.loads(data)
+
+#after receive..
+received_seq_number = stp_packet.seq_num
+
+#timer expiry
+#on send
+make a timer, start()
+
+#fail
+stp_retransmit
+
+#receive:
+self.timer.cancel()
+The Receiver should generate an ACK immediately after receiving a data segment.
+ The format of the acknowledgement segment must be exactly similar to the STP data segment. It should however not contain any payload.
+ This is the only ACK generation rule you need. You do not need to follow Table 3.2 of the text.
+In other words, you do no have to implement delayed ACKs.
+
+The receiver is expected to buffer out-of-order arrival packets.
+ The receiver should first open a UDP listening socket on receiver_port and then wait for segments to arrive from the Sender.
+ The first segment to be sent by the Sender is a SYN segment and the receiver is expected to reply a SYNACK segment.
+ After the completion of the three-way handshake, the receiver should create a new text file called file.txt.
+ All incoming data should be stored in this file.
+ The Receiver should first extract the STP packet from the arriving UDP datagrams and then extract the data (i.e. payload) from the STP packet.
+ Note that, the Receiver is allowed to examine the header of the UDP datagram that encapsulates the STP Packet to determine the UDP port and IP address that the Sender is using.
+ The data should be written into file.txt.
+At the end of the transfer, the Receiver should have a duplicate of the text file sent by the Sender.
+ You can verify this by using the diff command on a Linux machine (diff file1.txt file2.txt).
+ The Receiver should also maintain a log file titled Receiver_log.txt where it records the information about each segment that it sends and receives.
+ The format should be exactly similar to the sender log file as outlined in the Sender specification.
+The Receiver should terminate after the connection closure procedure initiated by the sender concludes.
+The Receiver should also print the following statistics at the end of the log file (i.e. Receiver_log.txt):

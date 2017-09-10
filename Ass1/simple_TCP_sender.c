@@ -29,6 +29,13 @@ loop (forever) {
 				if (there are currently any not yet acknowledged segments) {
 					start timer
 				}
+			} else { /* a duplicate ACK for already ACKed segment */
+				increment number of duplicate ACKs received for y
+				if (number of duplicate ACKs received for y == 3) {
+					/* TCP fast retransmit */
+					resend segment with sequence number y
+				}
+
 			}
 			break;
 }	/* end of loop forever */
