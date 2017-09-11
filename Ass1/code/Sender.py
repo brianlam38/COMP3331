@@ -27,14 +27,10 @@ class STPPacket:
 		self.fin = fin
 
 class Sender:
-	# you need to create this.
 	# a lot more complicated, but just follow the assignment spec
 	# you can do go-back-N, selective repeat, whatever works
 	# also need sequence number
 
-	# create initial seq nums
-	init_seq_num = 0
-	init_ack_num = 0
 	# NextSeqNum = InitialSeqNumber
 	# SendBase = InitialSeqNumber
 
@@ -70,62 +66,127 @@ class Sender:
 	# modify later to create packet based off MSS / MWS
 	# -> separate into segments -> pop into stack
 	# SENDER SYN + PAYLOAD
-	def make_pkt(self, data):
-		stp_packet = STPPacket(data, self.init_seq_num, self.init_ack_num, False, True, False)
-		return stp_packet
 
 	# send via. UDP to receiver
 	socket = socket(AF_INET, SOCK_DGRAM)
+	socket.setblocking(0)	# temp fix
+	socket.settimeout(100)	# temp fix
 	def udp_send(self, stp_packet):
 		# sender explicitly attaches IP destination address and port no. to each packet
 		self.socket.sendto(pickle.dumps(stp_packet), (self.r_host_ip, self.r_port))
 		#return_msg, server_add = socket.recvfrom(2048)	# receives data from server
-		#self.socket.close()
+
+	# receive packet from receiver
+	# convert packet to dict format
+	def stp_rcv(self):
+		self.socket.bind(('', self.r_port))
+		data, addr = self.socket.recvfrom(2048)   # extracts sender IP and port number
+		stp_packet = pickle.loads(data)			  # converts data back to packet
+		return stp_packet
 
 	# FIN close
 	def stp_close(self):
 		self.socket.close()
 
-# how to create packet?
-# myPacket = Packet(data, 0, 0, True, False, False)
+	# Determine state - for timeout
+	#def determine_state(self, state):
+	#	if state = 'state_closed':
+	#
+	#	return state
 
-# Packet is an object. How to send and receive this over UDP?
-
-# send
-#stp_packet = STPPacket(data, . . .)
-#socket.sendto(pickle.dumps(stp_packet), (client_ip, client_port))
-
-# on send - timer expiry
-# 	start_timer
-# on fail
-# 	stp_retransmit
-
-# TEST PRINT CODE
-#file = sys.argv[1]
-#x = Sender('127.0.0.1',4096,file,0,0,0,0,0)	# create instance of sender
-#packet = x.read_file()			# open file, create segment
-#x.stp_send(packet)				# send segment
 
 ###################
 # MAIN FUNCTION???
 ###################
 
-# Check correct usage
+###################
+#NOTE : CONTROL PACKETS ARE LOSSLESS, REMOVE TIMEOUTS FROM THESE CASES
+###################
+
+### CHECK CORRECT USAGE ###
 num_args = 9
-if len(sys.argv) != num_args:				# check num args
+if len(sys.argv) != num_args:
 	print("Usage: ./Receiver.py host_ip port file.txt MWS MSS timeout pdrop seed")
-# Continue to main operation
 else:
-	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed  = sys.argv[1:]		# grab args
-	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed) # create instance of sender
-	print("Sender is ready ...")
-	log = open("Sender_log.txt","w")	# create log for recording segment info
+	### SET UP VARIABLES ###
+	# initial seq ack numbers
+	seq_num = 0
+	ack_num = 0
+	# sender states
+	state_closed = True
+	state_syn_sent = False
+	state_timeout = False
+	state_established = False
+	# track states and packets
+	prev_state = None
+	curr_packet = None
+	# grab args, create Sender_log.txt
+	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
+	log = open("Sender_log.txt","w")
 
-	data = sender.stp_send()			# app passes data down to sender transport layer
-	packet = sender.make_pkt(data)		# create packet from data
-	sender.udp_send(packet)				# send packet over UDP
+	### APP LAYER INITIATES CLIENT TCP ###
+	print("Sender initiated . . . creating socket object")
+	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed)
 
-	sender.stp_close()					# everything done -> close connection
+	# loop until connection closed								
+	while True:
+	### CLOSED STATE ###
+		if state_closed == True:
+			prev_state = 'state_closed'
+			print("STATE: CLOSED")
+			syn_pkt = STPPacket(None, seq_num, ack_num, ack=False, syn=True, fin=False)	# create SYN packet
+			curr_packet = syn_pkt 			# set curr pkt = SYN
+			sender.udp_send(syn_pkt)		# send SYN -> receiver
+			state_closed = False
+			state_syn_sent = True
+
+	### SYN SENT STATE - WAIT FOR SYNACK ###
+		if state_syn_sent == True:
+			prev_state = 'state_syn_sent'
+			print("STATE: SYN SENT")
+			synack_pkt = sender.stp_rcv()
+			# correct synack segment
+			if synack_pkt.ack_num == (self.seq_num + 1) and synack_pkt.syn == True:
+				print("SYNACK received . . .")
+				state_established = True
+			# timeout
+			#elif time == timeout
+			#	print("SYNACK timeout . . .")
+			#	state_timeout = True
+			#	state_syn_sent = False
+
+	### TIMEOUT / RESEND STATE - only needs to care about established state ###
+		if state_timeout == True:
+			print("STATE: RESEND PACKET")
+			packet = curr_packet
+			state = prev_state
+			sender.udp_send(packet)
+			state_timeout = False
+			state_syn_sent = True
+
+	### ESTABLISHED STATE - SYNACK RECEIVED, BEGIN PAYLOAD SEND ###
+		if state_established == True:
+			print("STATE: Established connection . . .")
+			data = sender.stp_send()		# grab app-layer payload
+			packet = STPPacket(data, 0, 0, 0, ack=False, syn=False, fin=False)		# create packet from data
+			sender.udp_send(packet)											# send packet over UDP
+			sender.stp_close()												# everything done -> close connection
+
+
+		# elif timer = timeout, resend packet
+		#		syn_pkt = sender.make_pkt(None, seq_num, ack_num, ack=False, syn=True, fin=False)
+		#		sender.udp_send(syn_pkt)
+
+		# BUFFER = ONLY HAPPENS ON RECEIVER SIDE
+		# else
+		#		put in buffer
+		#		continue
+
+
+# on send - timer expiry
+# 	start_timer
+# on fail
+# 	stp_retransmit
 
 
 '''

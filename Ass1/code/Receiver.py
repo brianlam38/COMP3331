@@ -41,6 +41,10 @@ class Receiver:
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
+	socket.setblocking(0)		# temp fix
+	socket.settimeout(100)		# temp fix
+	seq_num = 0
+	ack_num = 0
 
 	# receive packet from sender
 	# convert packet to dict format
