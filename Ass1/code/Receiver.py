@@ -39,23 +39,21 @@ class Receiver:
 		self.port = int(port)
 		self.file = file
 
+	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
 
 	# receive packet from sender
+	# convert packet to dict format
 	def stp_rcv(self):
 		self.socket.bind(('', self.port))
 		data, addr = self.socket.recvfrom(2048)   # extracts sender IP and port number
 		stp_packet = pickle.loads(data)			  # converts data back to packet
 		return stp_packet
 
-	# FIN close
-	def stp_close(self):
-		self.socket.close()
-
 	# grab payload from packet
-	def get_data(self, packet):
-		data = stp_packet.data
-		return data
+	#def get_data(self, packet):
+	#	data = stp_packet.data
+	#	return data
 
 	# append packet data to single receiver txt file
 	def stp_append(self, data):
@@ -63,39 +61,53 @@ class Receiver:
 		f.write(data)
 		f.close()
 
+	# create ACK packet without payload
+	# RECEIVER SYNACK
+	def make_ACK(self):
+		# no payload (data = empty)
+		SYNACK = STPPacket(0, self.init_seq_num, self.init_ack_num, True, True, False)
+		return SYNACK
+
 	# receiver send a packet to sender (ACKS, NAKS etc.)
-	def stp_send(self, packet):
+	def udp_send(self, packet):
 		# sender explicitly attaches IP destination address and port no. to each packet
 		self.socket.sendto(pickle.dumps(stp_packet), (self.r_host_ip, self.r_port))
 		#return_msg, server_add = socket.recvfrom(2048)	# receives data from server
+		self.socket.close()
+
+	# FIN close
+	def stp_close(self):
 		self.socket.close()
 
 ###################
 # MAIN FUNCTION???
 ###################
 
+# Check correct usage
 num_args = 3
 if len(sys.argv) != num_args:				# check num args
 	print("Usage: ./Receiver.py port file.txt")
+# Continue to main operation
 else:
 	r_port, file = sys.argv[1:]				# grab args
 	receiver = Receiver(r_port, file)		# create instance of sender
 	print("Receiver is ready ...")
-	log = open("Receiver_log.txt","w")				# create log for recording segment info
+	log = open("Receiver_log.txt","w")		# create log for recording segment info
 	# waiting for file from sender
 	while True:
 		stp_packet = receiver.stp_rcv()  		# receive packet
-		data = receiver.get_data(stp_packet)  # obtain payload from packet
+		r_seq_num = stp_packet.seq_num 			# grab seq num after receiving packet
+		# generate ACK immediately after receiving segment (ACK = STP segment - payload)
+		data = stp_packet.data 					# obtain payload from packet
 		receiver.stp_append(data)		 		# append packet data to r_file.txt
-		break
+		break 
 	# print test the output file
+	print("Current file content:\n")
 	f = open("r_test.txt","r")
 	print(f.read())
 	# everything finished -> close connection
 	receiver.stp_close()
 
-# after receiving packet
-#received_seq_num = stp_packet.seq_num
 
 # on receive
 # The receiver should generate ACK immediately after receiving a data segment

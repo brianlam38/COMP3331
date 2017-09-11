@@ -49,12 +49,12 @@ class Sender:
 		self.pdrop = pdrop
 		self.seed = seed
 
-	# read file from input -> separate into segments -> pop into stack
+	# Read file from input, extract data and store in class
 	# NOTE: max_seg_size = max bytes carried in each STP segment
 	#
 	# Called by app-layer to pass down data to transport layer.
 	def stp_send(self):
-		#file = sys.argv[2]		
+		#file = sys.argv[2]
 		file_size = len(self.file) 		# file_size = os.path.getsize(file)
 		print(file_size)
 		# read file
@@ -66,10 +66,12 @@ class Sender:
 		data = f.read()				# read file + store in data obj
 		return data
 
-	# creating stp_packet to send to receiver
+	# creating packet to send to receiver
 	# modify later to create packet based off MSS / MWS
+	# -> separate into segments -> pop into stack
+	# SENDER SYN + PAYLOAD
 	def make_pkt(self, data):
-		stp_packet = STPPacket(data, self.init_seq_num, self.init_ack_num, True, False, False)
+		stp_packet = STPPacket(data, self.init_seq_num, self.init_ack_num, False, True, False)
 		return stp_packet
 
 	# send via. UDP to receiver
@@ -108,21 +110,22 @@ class Sender:
 # MAIN FUNCTION???
 ###################
 
+# Check correct usage
 num_args = 9
 if len(sys.argv) != num_args:				# check num args
 	print("Usage: ./Receiver.py host_ip port file.txt MWS MSS timeout pdrop seed")
+# Continue to main operation
 else:
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed  = sys.argv[1:]		# grab args
 	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed) # create instance of sender
 	print("Sender is ready ...")
-	log = open("Sender_log.txt","w")		# create log for recording segment info
+	log = open("Sender_log.txt","w")	# create log for recording segment info
 
-	data = sender.stp_send()		# app passes data down to sender transport layer
-	packet = sender.make_pkt(data)			# create packet from data
-	sender.udp_send(packet)			# send packet over UDP
+	data = sender.stp_send()			# app passes data down to sender transport layer
+	packet = sender.make_pkt(data)		# create packet from data
+	sender.udp_send(packet)				# send packet over UDP
 
 	sender.stp_close()					# everything done -> close connection
-
 
 
 '''
