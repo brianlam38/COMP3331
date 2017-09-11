@@ -81,16 +81,17 @@ else:
 	r_port, file = sys.argv[1:]				# grab args
 	receiver = Receiver(r_port, file)		# create instance of sender
 	print("Receiver is ready ...")
+	log = open("Receiver_log.txt","w")				# create log for recording segment info
 	# waiting for file from sender
 	while True:
 		stp_packet = receiver.stp_rcv()  		# receive packet
 		data = receiver.get_data(stp_packet)  # obtain payload from packet
 		receiver.stp_append(data)		 		# append packet data to r_file.txt
 		break
-	# everything finished -> close connection
 	# print test the output file
 	f = open("r_test.txt","r")
 	print(f.read())
+	# everything finished -> close connection
 	receiver.stp_close()
 
 # after receiving packet

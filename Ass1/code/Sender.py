@@ -41,7 +41,7 @@ class Sender:
 	# initialise sender data: seq number, timeout
 	def __init__(self, r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed):
 		self.r_host_ip = r_host_ip
-		self.r_port = r_port
+		self.r_port = int(r_port)
 		self.file = file      		# grab file from arg[4]
 		self.MWS = MWS				# max window size
 		self.MSS = MSS 				# max segment size
@@ -51,8 +51,9 @@ class Sender:
 
 	# read file from input -> separate into segments -> pop into stack
 	# NOTE: max_seg_size = max bytes carried in each STP segment
-	#       
-	def read_file(self):
+	#
+	# Called by app-layer to pass down data to transport layer.
+	def stp_send(self):
 		#file = sys.argv[2]		
 		file_size = len(self.file) 		# file_size = os.path.getsize(file)
 		print(file_size)
@@ -60,18 +61,27 @@ class Sender:
 		# segment = filesize / max_seg_size
 		# seg_size
 
-		# preparing data + creating segment
+		# preparing data
 		f = open(self.file, "r")	# open file
 		data = f.read()				# read file + store in data obj
+		return data
+
+	# creating stp_packet to send to receiver
+	# modify later to create packet based off MSS / MWS
+	def make_pkt(self, data):
 		stp_packet = STPPacket(data, self.init_seq_num, self.init_ack_num, True, False, False)
 		return stp_packet
 
 	# send via. UDP to receiver
 	socket = socket(AF_INET, SOCK_DGRAM)
-	def stp_send(self, stp_packet):
+	def udp_send(self, stp_packet):
 		# sender explicitly attaches IP destination address and port no. to each packet
 		self.socket.sendto(pickle.dumps(stp_packet), (self.r_host_ip, self.r_port))
 		#return_msg, server_add = socket.recvfrom(2048)	# receives data from server
+		#self.socket.close()
+
+	# FIN close
+	def stp_close(self):
 		self.socket.close()
 
 # how to create packet?
@@ -89,10 +99,29 @@ class Sender:
 # 	stp_retransmit
 
 # TEST PRINT CODE
-file = sys.argv[1]
-x = Sender('127.0.0.1',4096,file,0,0,0,0,0)	# create instance of sender
-packet = x.read_file()			# open file, create segment
-x.stp_send(packet)				# send segment
+#file = sys.argv[1]
+#x = Sender('127.0.0.1',4096,file,0,0,0,0,0)	# create instance of sender
+#packet = x.read_file()			# open file, create segment
+#x.stp_send(packet)				# send segment
+
+###################
+# MAIN FUNCTION???
+###################
+
+num_args = 9
+if len(sys.argv) != num_args:				# check num args
+	print("Usage: ./Receiver.py host_ip port file.txt MWS MSS timeout pdrop seed")
+else:
+	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed  = sys.argv[1:]		# grab args
+	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed) # create instance of sender
+	print("Sender is ready ...")
+	log = open("Sender_log.txt","w")		# create log for recording segment info
+
+	data = sender.stp_send()		# app passes data down to sender transport layer
+	packet = sender.make_pkt(data)			# create packet from data
+	sender.udp_send(packet)			# send packet over UDP
+
+	sender.stp_close()					# everything done -> close connection
 
 
 
