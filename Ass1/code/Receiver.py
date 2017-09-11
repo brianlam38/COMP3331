@@ -36,23 +36,23 @@ class Receiver:
 
 	# initialise sender data: seq number, timeout
 	def __init__(self, port, file):
+		self.host = '127.0.0.1'
 		self.port = int(port)
 		self.file = file
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
-	socket.setblocking(0)		# temp fix
-	socket.settimeout(100)		# temp fix
+	#socket.setblocking(0)		# temp fix
+	#socket.settimeout(100)		# temp fix
 	seq_num = 0
 	ack_num = 0
 
 	# receive packet from sender
 	# convert packet to dict format
 	def stp_rcv(self):
-		self.socket.bind(('', self.port))
 		data, addr = self.socket.recvfrom(2048)   # extracts sender IP and port number
 		stp_packet = pickle.loads(data)			  # converts data back to packet
-		return stp_packet
+		return stp_packet, addr 	# return both packet + client_addr
 
 	# grab payload from packet
 	#def get_data(self, packet):
@@ -61,9 +61,10 @@ class Receiver:
 
 	# append packet data to single receiver txt file
 	def stp_append(self, data):
-		f = open("r_test.txt", "a+")
-		f.write(data)
-		f.close()
+		print("data = {}".format(data))
+		#f = open("r_test.txt", "a+")
+		#f.write(data)
+		#f.close()
 
 	# create ACK packet without payload
 	# RECEIVER SYNACK
@@ -73,11 +74,10 @@ class Receiver:
 		return SYNACK
 
 	# receiver send a packet to sender (ACKS, NAKS etc.)
-	def udp_send(self, packet):
+	def udp_send(self, packet, addr):
 		# sender explicitly attaches IP destination address and port no. to each packet
-		self.socket.sendto(pickle.dumps(stp_packet), (self.r_host_ip, self.r_port))
+		self.socket.sendto(pickle.dumps(stp_packet), addr)
 		#return_msg, server_add = socket.recvfrom(2048)	# receives data from server
-		self.socket.close()
 
 	# FIN close
 	def stp_close(self):
@@ -93,14 +93,22 @@ if len(sys.argv) != num_args:				# check num args
 	print("Usage: ./Receiver.py port file.txt")
 # Continue to main operation
 else:
-	r_port, file = sys.argv[1:]				# grab args
-	receiver = Receiver(r_port, file)		# create instance of sender
+	port, file = sys.argv[1:]				# grab args
+	receiver = Receiver(port, file)			# create instance of sender
+	receiver.socket.bind(('', receiver.port))
 	print("Receiver is ready ...")
 	log = open("Receiver_log.txt","w")		# create log for recording segment info
 	# waiting for file from sender
 	while True:
-		stp_packet = receiver.stp_rcv()  		# receive packet
-		r_seq_num = stp_packet.seq_num 			# grab seq num after receiving packet
+		stp_packet, addr = receiver.stp_rcv()  		# receive packet
+		syn_bit = stp_packet.syn 					# grab seq num after receiving packet
+		print("SYN = {}".format(syn_bit))
+		if syn_bit == True:
+			print("SYN = inside synack creation")
+			synack = STPPacket('hello world', 1, 1, ack=False, syn=True, fin=False)
+			print("SYNACK created")
+			receiver.udp_send(synack, addr)
+			print("SYNACK sent")
 		# generate ACK immediately after receiving segment (ACK = STP segment - payload)
 		data = stp_packet.data 					# obtain payload from packet
 		receiver.stp_append(data)		 		# append packet data to r_file.txt

@@ -11,7 +11,6 @@
 
 import pickle
 import sys
-import os
 from socket import *
 
 # exe format:
@@ -45,6 +44,10 @@ class Sender:
 		self.pdrop = pdrop
 		self.seed = seed
 
+	socket = socket(AF_INET, SOCK_DGRAM)
+	#socket.setblocking(0)	# temp fix
+	#socket.settimeout(100)	# temp fix
+
 	# Read file from input, extract data and store in class
 	# NOTE: max_seg_size = max bytes carried in each STP segment
 	#
@@ -68,9 +71,6 @@ class Sender:
 	# SENDER SYN + PAYLOAD
 
 	# send via. UDP to receiver
-	socket = socket(AF_INET, SOCK_DGRAM)
-	socket.setblocking(0)	# temp fix
-	socket.settimeout(100)	# temp fix
 	def udp_send(self, stp_packet):
 		# sender explicitly attaches IP destination address and port no. to each packet
 		self.socket.sendto(pickle.dumps(stp_packet), (self.r_host_ip, self.r_port))
@@ -79,7 +79,6 @@ class Sender:
 	# receive packet from receiver
 	# convert packet to dict format
 	def stp_rcv(self):
-		self.socket.bind(('', self.r_port))
 		data, addr = self.socket.recvfrom(2048)   # extracts sender IP and port number
 		stp_packet = pickle.loads(data)			  # converts data back to packet
 		return stp_packet
@@ -124,16 +123,18 @@ else:
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
 	log = open("Sender_log.txt","w")
 
-	### APP LAYER INITIATES CLIENT TCP ###
+	# App layer initiates client TCP
 	print("Sender initiated . . . creating socket object")
 	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed)
-
-	# loop until connection closed								
+	
+	# loop until connection closed						
 	while True:
+		print("looping")
 	### CLOSED STATE ###
 		if state_closed == True:
 			prev_state = 'state_closed'
 			print("STATE: CLOSED")
+
 			syn_pkt = STPPacket(None, seq_num, ack_num, ack=False, syn=True, fin=False)	# create SYN packet
 			curr_packet = syn_pkt 			# set curr pkt = SYN
 			sender.udp_send(syn_pkt)		# send SYN -> receiver
@@ -145,8 +146,10 @@ else:
 			prev_state = 'state_syn_sent'
 			print("STATE: SYN SENT")
 			synack_pkt = sender.stp_rcv()
+			print("synack ack_num = {}".format(synack_pkt.ack_num))
+			print("synack syn = {}".format(synack_pkt.syn))
 			# correct synack segment
-			if synack_pkt.ack_num == (self.seq_num + 1) and synack_pkt.syn == True:
+			if synack_pkt.ack_num == 0 and synack_pkt.syn == True:
 				print("SYNACK received . . .")
 				state_established = True
 			# timeout
@@ -168,9 +171,10 @@ else:
 		if state_established == True:
 			print("STATE: Established connection . . .")
 			data = sender.stp_send()		# grab app-layer payload
-			packet = STPPacket(data, 0, 0, 0, ack=False, syn=False, fin=False)		# create packet from data
-			sender.udp_send(packet)											# send packet over UDP
+			packet = STPPacket(data, 0, 0, ack=False, syn=False, fin=False)		# create packet from data
+			#sender.udp_send(packet)											# send packet over UDP
 			sender.stp_close()												# everything done -> close connection
+			break
 
 
 		# elif timer = timeout, resend packet
