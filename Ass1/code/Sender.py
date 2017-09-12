@@ -92,14 +92,38 @@ class Sender:
 		self.socket.close()
 
 	# Update Sender_log.txt
-	def update_log(self, action, type, seq, bytes, ack):
+	def update_log(self, action, pkt_type, seq, size, ack):
 		print("Updating sender log . . .")
-		# include time
+		curr_time = time.clock() 	 # temp timer
+		curr_time = curr_time * 1000 # convert to MS
+		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
+
+		# init arrays of args and col lens
+		col_lens = [5, 7, 4, 4, 3, 3]
+		args = [action, curr_time, pkt_type, seq, size, ack]
+
+		# build string
+		final_str = ""
+		counter = 0
+		# loop through columns
+		for c in col_lens:
+			arg_len = len(args[counter])
+			space_len = c - arg_len
+			space_str = ""
+			# add whitespace for each column
+			while arg_len < c:
+				space_str += " "
+				arg_len += 1
+			# form complete line
+			final_str += str(args[counter]) + space_str
+			counter += 1
+		# add newline to final str
+		final_str += "\n"
+		print(final_str)
+		# append complete line to log
 		f = open("Sender_log.txt", "a+")
-		f.write(action)
+		f.write(final_str)
 		f.close()
-		f = open("Sender_log.txt", "r")
-		print(f.read())
 
 ###################
 #NOTE : CONTROL PACKETS ARE LOSSLESS, REMOVE TIMEOUTS FROM THESE CASES
@@ -146,18 +170,19 @@ else:
 		### CLOSED STATE ###
 		# send SYN seg
 		if state_closed == True:
-			print("===================== STATE: CLOSED")
+			print("\n===================== STATE: CLOSED")
 			syn_pkt = sender.make_SYN(seq_num, ack_num)
-			sender.update_log("snd", 'S', 0, 0, 0)
 			sender.udp_send(syn_pkt); print("Sending SYN")
+			sender.update_log("snd", 'S', 0, 0, 0)
 			state_closed = False
 			state_syn_sent = True
 
 		### SYN SENT STATE - WAIT FOR SYNACK ###
 		# wait for SYNACK seg
 		if state_syn_sent == True:
-			print("===================== STATE: SYN SENT")
+			print("\n===================== STATE: SYN SENT")
 			synack_pkt = sender.stp_rcv()
+			sender.update_log("rcv", 'SA', 0, 0, 0)
 			print("synack data = {}".format(synack_pkt.data))
 			print("synack ack = {}".format(synack_pkt.ack))
 			print("synack syn = {}".format(synack_pkt.syn))
@@ -165,6 +190,7 @@ else:
 			if synack_pkt.ack == True and synack_pkt.syn == True:
 				ack_pkt = sender.make_ACK(seq_num, ack_num)
 				sender.udp_send(ack_pkt); print("Sending ACK")
+				sender.update_log("snd", 'A', 0, 0, 0)
 				print("SYNACK received . . .")
 				state_established = True
 				state_syn_sent = False
@@ -176,7 +202,7 @@ else:
 
 		### TIMEOUT / RESEND STATE ###
 		if state_timeout == True:
-			print("===================== STATE: RESEND PACKET")
+			print("\n===================== STATE: RESEND PACKET")
 			packet = curr_packet
 			state = prev_state
 			sender.udp_send(packet)
@@ -185,38 +211,46 @@ else:
 
 		### ESTABLISHED STATE ###
 		if state_established == True:
-			print("===================== STATE: CONNECTION ESTABLISHED")
+			print("\n===================== STATE: CONNECTION ESTABLISHED")
 			# manipulate app_data to create separate packets
 			# manipulate app_data to create separate packets
 			# manipulate app_data to create separate packets
 			packet = STPPacket(app_data, 0, 0, ack=False, syn=False, fin=False)
 			sender.udp_send(packet); print("Sending payload packet")
+			sender.update_log("snd", 'D', 0, 0, 0)
 			app_data_progress += len(app_data)
 			# whole file has been sent, begin close connection
 			if app_data_progress == len(app_data):
 				# send FIN
 				fin_pkt = sender.make_FIN(seq_num, ack_num)
 				sender.udp_send(fin_pkt); print("Sending FIN")
+				sender.update_log("snd", 'F', 0, 0, 0)
 				state_end = True
 				state_established = False
 
 		### END OF CONNECTION ###
 		# wait for ACK
 		if state_end == True:
-			print("=== STATE: END OF CONNECTION ===")
-			ack_pkt = sender.stp_rcv()
+			print("\n=== STATE: END OF CONNECTION ===")
+			ack_pkt = sender.stp_rcv() # ACK log combined with FIN below
 			# received ACK -> wait for FIN
 			if ack_pkt.ack == True:
 				fin_pkt = sender.stp_rcv()
+				sender.update_log("rcv", 'FA', 0, 0, 0)
 				# received FIN -> send ACK + wait 30 seconds
 				if fin_pkt.fin == True:
 					ack_pkt = sender.make_ACK(seq_num, ack_num)
 					sender.udp_send(ack_pkt)
+					sender.update_log("snd", 'A', 0, 0, 0)
 					print("Waiting 30 seconds")
 					#time.sleep(30)
 					break
 
 	sender.stp_close()
+	# print out complete log
+	print("\n### FINAL SENDER LOG ###")
+	f = open("Sender_log.txt", "r")
+	print(f.read())
 
 
 	### TIMEOUT ###
