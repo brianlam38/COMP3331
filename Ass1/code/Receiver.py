@@ -59,16 +59,27 @@ class Receiver:
 	# append packet data to single receiver txt file
 	def stp_append(self, data):
 		print("data = {}".format(data))
-		#f = open("r_test.txt", "a+")
-		#f.write(data)
-		#f.close()
+		f = open("r_test.txt", "a+")
+		f.write(data)
+		f.close()
 
-	# create ACK packet without payload
-	# RECEIVER SYNACK
-	def make_ACK(self):
-		# no payload (data = empty)
-		SYNACK = STPPacket(0, self.init_seq_num, self.init_ack_num, True, True, False)
+	# create SYNACK
+	def make_SYNACK(self, seq_num, ack_num):
+		print("Creating SYNACK")
+		SYNACK = STPPacket('2. SYNACK', seq_num, ack_num, ack=True, syn=True, fin=False)
 		return SYNACK
+
+	# create ACK
+	def make_ACK(self, seq_num, ack_num):
+		print("Creating ACK")
+		ACK = STPPacket('ACK', seq_num, ack_num, ack=True, syn=False, fin=False)
+		return ACK
+
+	# create FIN
+	def make_FIN(self, seq_num, ack_num):
+		print("Creating FIN")
+		FIN = STPPacket('FIN', seq_num, ack_num, ack=False, syn=False, fin=True)
+		return FIN
 
 	# receiver send a packet to sender (ACKS, NAKS etc.)
 	def udp_send(self, packet, addr):
@@ -78,6 +89,7 @@ class Receiver:
 
 	# FIN close
 	def stp_close(self):
+		print("Connection closed")
 		self.socket.close()
 
 ###################
@@ -106,40 +118,72 @@ else:
 	receiver.socket.bind(('', receiver.port))
 	print("Receiver is ready ...")
 	log = open("Receiver_log.txt","w")		# create log for recording segment info
-	# waiting for file from sender
+
+	### FOREVER LOOP ###
 	count = 0
 	while True:
 		count += 1
 		print("{} loop".format(count))
-	### CLOSED STATE ###
+	### LISTENING STATE ###
+		# wait for SYN packet
 		if state_listen == True:
 			print("STATE: LISTEN")
-			syn_pkt, client_addr = receiver.stp_rcv() # wait for SYN packet
-			syn_bit = syn_pkt.syn 					 # grab SYN bit after receiving packet
+			syn_pkt, client_addr = receiver.stp_rcv()
+			syn_bit = syn_pkt.syn
 			print("syn data = {}".format(syn_pkt.data))
+			# Creating SYNACK
 			if syn_bit == True:
-				print("SYN = inside synack creation")
-				synack_pkt = STPPacket('2. SYNACK', 1, 1, ack=True, syn=True, fin=False)
-				print("SYNACK created")
+				synack_pkt = receiver.make_SYNACK(seq_num, ack_num)
 				receiver.udp_send(synack_pkt, client_addr)
-				print("SYNACK sent")
 				state_synack_sent = True
 				state_listen = False
+
+	### SYNACK SENT ###
+		# wait for ACK packet
 		if state_synack_sent == True:
 			print("STATE: SYNACK SENT")
-			ack_pkt, client_addr = receiver.stp_rcv()  		# wait for ACK packet
+			ack_pkt, client_addr = receiver.stp_rcv()
 			ack_bit = ack_pkt.ack
-			print("ACK = {}".format(ack_bit))
-		# generate ACK immediately after receiving segment (ACK = STP segment - payload)
-		#data = stp_packet.data 					# obtain payload from packet
-		#receiver.stp_append(data)		 		# append packet data to r_file.txt
-		break	# temp break to stop loop
-	# print test the output file
+			print("ack data = {}".format(ack_pkt.data))
+			if ack_bit == True:
+				state_established = True
+				state_synack_sent = False
+
+	### HANDSHAKE ESTABLISHED ###
+		if state_established == True:
+			print("STATE: CONNECTION ESTABLISHED")
+			# listen until connection closed on client-side
+			while True:
+				packet, client_addr = receiver.stp_rcv()	# obtain payload from packet
+				data = packet.data 							# append payload to r_file.txt
+				print("Packet Payload = {}".format(data))
+				receiver.stp_append(data)
+				# Receive FIN, initiate close of connection
+				if packet.fin == True:
+					# send ACK
+					ack_pkt = receiver.make_ACK(seq_num, ack_num)
+					receiver.udp_send(ack_pkt, client_addr)
+					state_end = True
+					state_established = False
+					break
+
+	### END OF CONNECTION ###
+		if state_end == True:
+			print("STATE: END OF CONNECTION")
+			# send FIN
+			fin_pkt = receiver.make_FIN(seq_num, ack_num)
+			receiver.udp_send(fin_pkt, client_addr); print("Sending FIN")
+			# wait for ACK
+			ack_pkt, client_addr = receiver.stp_rcv()
+			# receive ack, close connection
+			if (ack_pkt.ack == True):
+				receiver.stp_close()
+				break
+
 	print("Current file content:\n")
 	f = open("r_test.txt","r")
 	print(f.read())
 	# everything finished -> close connection
-	receiver.stp_close()
 
 
 # on receive
