@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
 # Simple Transport Protocol (STP)
+# Receiver side program
 #
-# Receiving side program
+# Author: Brian Lam
 
 # Sender -> Packet (seq = 10) -> Receiver
 # if match seq number
@@ -30,34 +31,25 @@ class STPPacket:
 		self.fin = fin
 
 class Receiver:
-	# you need to create this
 	# receiver needs to have a sequence number so it can deal with out-of-order pakes
 	# receiver receives stp_packet and then writes the data inside the packet
 
-	# initialise sender data: seq number, timeout
+	# initialise receiver data
 	def __init__(self, port, file):
 		self.port = int(port)
 		self.file = file
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
-	#socket.setblocking(0)		# temp fix
-	#socket.settimeout(100)		# temp fix
 
-	# receive packet from sender
-	# convert packet to dict format
+	# receive packet from sender, return pkt + client address
 	def stp_rcv(self):
-		data, client_addr = self.socket.recvfrom(2048)   # extracts sender IP and port number
-		stp_packet = pickle.loads(data)			  # converts data back to packet
-		return stp_packet, client_addr 			  # return both packet + client_addr
+		data, client_addr = self.socket.recvfrom(2048)
+		stp_packet = pickle.loads(data)
+		return stp_packet, client_addr
 
-	# grab payload from packet
-	#def get_data(self, packet):
-	#	data = stp_packet.data
-	#	return data
-
-	# append packet data to single receiver txt file
-	def stp_append(self, data):
+	# add payload to final file
+	def append_payload(self, data):
 		print("data = {}".format(data))
 		f = open("r_test.txt", "a+")
 		f.write(data)
@@ -66,7 +58,7 @@ class Receiver:
 	# create SYNACK
 	def make_SYNACK(self, seq_num, ack_num):
 		print("Creating SYNACK")
-		SYNACK = STPPacket('2. SYNACK', seq_num, ack_num, ack=True, syn=True, fin=False)
+		SYNACK = STPPacket('SYNACK', seq_num, ack_num, ack=True, syn=True, fin=False)
 		return SYNACK
 
 	# create ACK
@@ -81,11 +73,9 @@ class Receiver:
 		FIN = STPPacket('FIN', seq_num, ack_num, ack=False, syn=False, fin=True)
 		return FIN
 
-	# receiver send a packet to sender (ACKS, NAKS etc.)
+	# send segment over UDP
 	def udp_send(self, packet, addr):
-		# sender explicitly attaches IP destination address and port no. to each packet
 		self.socket.sendto(pickle.dumps(packet), addr)
-		#return_msg, server_add = socket.recvfrom(2048)	# receives data from server
 
 	# FIN close
 	def stp_close(self):
@@ -98,7 +88,7 @@ class Receiver:
 
 # Check correct usage
 num_args = 3
-if len(sys.argv) != num_args:				# check num args
+if len(sys.argv) != num_args:
 	print("Usage: ./Receiver.py port file.txt")
 # Continue to main operation
 else:
@@ -112,53 +102,47 @@ else:
 	state_syn_rcv = False
 	state_synack_sent = False
 	state_established = False
-	# grab args, create receiver socket
-	port, file = sys.argv[1:]				# grab args
-	receiver = Receiver(port, file)			# create instance of sender
+	# grab args, create socket, bind and create log.txt
+	port, file = sys.argv[1:]
+	receiver = Receiver(port, file)
 	receiver.socket.bind(('', receiver.port))
 	print("Receiver is ready ...")
-	log = open("Receiver_log.txt","w")		# create log for recording segment info
+	log = open("Receiver_log.txt","w")
 
-	### FOREVER LOOP ###
-	count = 0
+	### MAIN EVENT LOOP ###
 	while True:
-		count += 1
-		print("{} loop".format(count))
-	### LISTENING STATE ###
-		# wait for SYN packet
+		print("start of loop")
+
+		### LISTENING STATE ###
+		# wait for SYN seg
 		if state_listen == True:
 			print("STATE: LISTEN")
 			syn_pkt, client_addr = receiver.stp_rcv()
-			syn_bit = syn_pkt.syn
-			print("syn data = {}".format(syn_pkt.data))
-			# Creating SYNACK
-			if syn_bit == True:
+			# creating SYNACK
+			if syn_pkt.syn == True:
 				synack_pkt = receiver.make_SYNACK(seq_num, ack_num)
 				receiver.udp_send(synack_pkt, client_addr)
 				state_synack_sent = True
 				state_listen = False
 
-	### SYNACK SENT ###
-		# wait for ACK packet
+		### SYNACK SENT ###
+		# wait for ACK seg
 		if state_synack_sent == True:
 			print("STATE: SYNACK SENT")
 			ack_pkt, client_addr = receiver.stp_rcv()
-			ack_bit = ack_pkt.ack
-			print("ack data = {}".format(ack_pkt.data))
-			if ack_bit == True:
+			# ACK received, 3-way-established
+			if ack_pkt.ack == True:
 				state_established = True
 				state_synack_sent = False
 
-	### HANDSHAKE ESTABLISHED ###
+		### HANDSHAKE ESTABLISHED ###
 		if state_established == True:
 			print("STATE: CONNECTION ESTABLISHED")
-			# listen until connection closed on client-side
+			# grab packets until FIN close request by client
 			while True:
-				packet, client_addr = receiver.stp_rcv()	# obtain payload from packet
-				data = packet.data 							# append payload to r_file.txt
-				print("Packet Payload = {}".format(data))
-				receiver.stp_append(data)
-				# Receive FIN, initiate close of connection
+				packet, client_addr = receiver.stp_rcv()
+				data = packet.data
+				# Receive FIN, init close
 				if packet.fin == True:
 					# send ACK
 					ack_pkt = receiver.make_ACK(seq_num, ack_num)
@@ -166,8 +150,12 @@ else:
 					state_end = True
 					state_established = False
 					break
+				# Receive normal seg, add payload to final file
+				else:
+					print("Packet Payload = {}".format(data))
+					receiver.append_payload(data)
 
-	### END OF CONNECTION ###
+		### END OF CONNECTION ###
 		if state_end == True:
 			print("STATE: END OF CONNECTION")
 			# send FIN
@@ -176,7 +164,7 @@ else:
 			# wait for ACK
 			ack_pkt, client_addr = receiver.stp_rcv()
 			# receive ack, close connection
-			if (ack_pkt.ack == True):
+			if ack_pkt.ack == True:
 				receiver.stp_close()
 				break
 
@@ -190,22 +178,6 @@ else:
 # The receiver should generate ACK immediately after receiving a data segment
 #self.timer.cancel()
 
-'''
-The receiver is expected to buffer out-of-order arrival packets.
- The receiver should first open a UDP listening socket on receiver_port and then wait for segments to arrive from the Sender.
- The first segment to be sent by the Sender is a SYN segment and the receiver is expected to reply a SYNACK segment.
- After the completion of the three-way handshake, the receiver should create a new text file called file.txt.
- All incoming data should be stored in this file.
- The Receiver should first extract the STP packet from the arriving UDP datagrams and then extract the data (i.e. payload) from the STP packet.
- Note that, the Receiver is allowed to examine the header of the UDP datagram that encapsulates the STP Packet to determine the UDP port and IP address that the Sender is using.
- The data should be written into file.txt.
-At the end of the transfer, the Receiver should have a duplicate of the text file sent by the Sender.
- You can verify this by using the diff command on a Linux machine (diff file1.txt file2.txt).
- The Receiver should also maintain a log file titled Receiver_log.txt where it records the information about each segment that it sends and receives.
- The format should be exactly similar to the sender log file as outlined in the Sender specification.
-The Receiver should terminate after the connection closure procedure initiated by the sender concludes.
-The Receiver should also print the following statistics at the end of the log file (i.e. Receiver_log.txt):
-'''
 
 
 # 1. Sender waits for data to be passed down from app layer
