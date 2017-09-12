@@ -83,6 +83,24 @@ class Sender:
 		stp_packet = pickle.loads(data)			  # converts data back to packet
 		return stp_packet
 
+	# create SYN
+	def make_SYN(self, seq_num, ack_num):
+		print("Creating SYN")
+		SYN = STPPacket('1. SYN', seq_num, ack_num, ack=False, syn=True, fin=False)
+		return SYN
+
+	# create ACK
+	def make_ACK(self, seq_num, ack_num):
+		print("Creating ACK")
+		ACK = STPPacket('ACK', seq_num, ack_num, ack=True, syn=False, fin=False)
+		return ACK
+
+	# create FIN
+	def make_FIN(self, seq_num, ack_num):
+		print("Creating FIN")
+		FIN = STPPacket('FIN', seq_num, ack_num, ack=False, syn=False, fin=True)
+		return FIN
+
 	# FIN close
 	def stp_close(self):
 		self.socket.close()
@@ -119,6 +137,8 @@ else:
 	# track states and packets
 	prev_state = None
 	curr_packet = None
+	# track progress of file sent
+	app_data_progress = 0
 	# grab args, create Sender_log.txt
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
 	log = open("Sender_log.txt","w")
@@ -135,7 +155,7 @@ else:
 			prev_state = 'state_closed'
 			print("STATE: CLOSED")
 
-			syn_pkt = STPPacket(None, seq_num, ack_num, ack=False, syn=True, fin=False)	# create SYN packet
+			syn_pkt = sender.make_SYN(seq_num, ack_num)
 			curr_packet = syn_pkt 			# set curr pkt = SYN
 			sender.udp_send(syn_pkt)		# send SYN -> receiver
 			state_closed = False
@@ -146,12 +166,16 @@ else:
 			prev_state = 'state_syn_sent'
 			print("STATE: SYN SENT")
 			synack_pkt = sender.stp_rcv()
-			print("synack ack_num = {}".format(synack_pkt.ack_num))
+			print("synack data = {}".format(synack_pkt.data))
+			print("synack ack = {}".format(synack_pkt.ack))
 			print("synack syn = {}".format(synack_pkt.syn))
 			# correct synack segment
-			if synack_pkt.ack_num == 0 and synack_pkt.syn == True:
+			if synack_pkt.ack == True and synack_pkt.syn == True:
+				ack_pkt = sender.make_ACK(seq_num, ack_num)
+				sender.udp_send(ack_pkt)
 				print("SYNACK received . . .")
 				state_established = True
+				state_syn_sent = False
 			# timeout
 			#elif time == timeout
 			#	print("SYNACK timeout . . .")
@@ -165,18 +189,46 @@ else:
 			state = prev_state
 			sender.udp_send(packet)
 			state_timeout = False
-			state_syn_sent = True
+			state_established = True
 
 	### ESTABLISHED STATE - SYNACK RECEIVED, BEGIN PAYLOAD SEND ###
 		if state_established == True:
 			print("STATE: Established connection . . .")
 			# manipulate app_data to create separate packets
+			# manipulate app_data to create separate packets
+			# manipulate app_data to create separate packets
 			packet = STPPacket(app_data, 0, 0, ack=False, syn=False, fin=False)		# create packet from data
-			#sender.udp_send(packet)											# send packet over UDP
-			sender.stp_close()												# everything done -> close connection
-			break
+			sender.udp_send(packet)													# send packet over UDP
+			app_data_progress += len(app_data)
+			# whole file has been sent, begin close connection
+			if app_data_progress == len(app_data):
+				# send FIN
+				fin_pkt = sender.make_FIN(seq_num, ack_num)
+				sender.udp_send(fin_pkt); print("FIN SENT")
+				state_end = True
+				state_established = False
+
+	### END OF CONNECTION ###
+		# wait for ACK
+		if state_end == True:
+			print("STATE: END OF CONNECTION")
+			ack_pkt = sender.stp_rcv()
+			# received ACK -> wait for FIN
+			if ack_pkt.ack == True:
+				fin_pkt = sender.stp_rcv()
+				# received FIN -> send ACK + wait 30 seconds
+				if fin_pkt.fin == True:
+					ack_pkt = sender.make_ACK(seq_num, ack_num)
+					sender.udp_send(ack_pkt)
+					print("Waiting 30 seconds")
+					try:
+						sender.socket.settimeout(2)
+					except socket.timeout:
+						print("Connection closed")
+						break
 
 
+	sender.stp_close()
 		# elif timer = timeout, resend packet
 		#		syn_pkt = sender.make_pkt(None, seq_num, ack_num, ack=False, syn=True, fin=False)
 		#		sender.udp_send(syn_pkt)
