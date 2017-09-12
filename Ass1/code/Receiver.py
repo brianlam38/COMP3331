@@ -83,6 +83,38 @@ class Receiver:
 		print("Connection closed")
 		self.socket.close()
 
+	# Update Receiver_log.txt
+	def update_log(self, action, pkt_type, seq, size, ack):
+		print("Updating sender log . . .")
+		curr_time = time.clock() 	 # temp timer
+		curr_time = curr_time * 1000 # convert to MS
+		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
+		# init arrays of args and col lens
+		col_lens = [5, 7, 4, 4, 3, 3]
+		args = [action, curr_time, pkt_type, seq, size, ack]
+		# build string
+		final_str = ""
+		counter = 0
+		# loop through columns
+		for c in col_lens:
+			arg_len = len(args[counter])
+			space_len = c - arg_len
+			space_str = ""
+			# add whitespace for each column
+			while arg_len < c:
+				space_str += " "
+				arg_len += 1
+			# append each col to line
+			final_str += str(args[counter]) + space_str
+			counter += 1
+		# add newline to final str
+		final_str += "\n"
+		print(final_str)
+		# append complete line to log
+		f = open("Receiver_log.txt", "a+")
+		f.write(final_str)
+		f.close()
+
 ###################
 # MAIN FUNCTION???
 ###################
@@ -106,12 +138,13 @@ else:
 	state_syn_rcv = False
 	state_synack_sent = False
 	state_established = False
-	# grab args, create socket, bind and create log.txt
+	# grab args, create socket, bind and reset log.txt
 	port, file = sys.argv[1:]
 	receiver = Receiver(port, file)
 	receiver.socket.bind(('', receiver.port))
+	f = open("Receiver_log.txt","w")
+	f.close()
 	print("Receiver is ready . . .")
-	log = open("Receiver_log.txt","w")
 
 	### MAIN EVENT LOOP ###
 	while True:

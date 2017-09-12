@@ -97,11 +97,9 @@ class Sender:
 		curr_time = time.clock() 	 # temp timer
 		curr_time = curr_time * 1000 # convert to MS
 		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
-
 		# init arrays of args and col lens
 		col_lens = [5, 7, 4, 4, 3, 3]
 		args = [action, curr_time, pkt_type, seq, size, ack]
-
 		# build string
 		final_str = ""
 		counter = 0
@@ -114,7 +112,7 @@ class Sender:
 			while arg_len < c:
 				space_str += " "
 				arg_len += 1
-			# form complete line
+			# append each col to line
 			final_str += str(args[counter]) + space_str
 			counter += 1
 		# add newline to final str
@@ -124,6 +122,10 @@ class Sender:
 		f = open("Sender_log.txt", "a+")
 		f.write(final_str)
 		f.close()
+
+	def start_timer(self):
+		# do stuff
+
 
 ###################
 #NOTE : CONTROL PACKETS ARE LOSSLESS, REMOVE TIMEOUTS FROM THESE CASES
@@ -138,6 +140,8 @@ if len(sys.argv) != num_args:
 	print("Usage: ./Receiver.py host_ip port file.txt MWS MSS timeout pdrop seed")
 else:
 	### SET UP VARIABLES ###
+	# timing vars
+	timer = 0
 	# init seq/ack vars
 	seq_num = 0
 	ack_num = 0
