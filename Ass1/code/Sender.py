@@ -5,7 +5,6 @@
 #
 # Author: Brian Lam
 
-
 import pickle
 import sys
 import time
@@ -102,9 +101,11 @@ if len(sys.argv) != num_args:
 	print("Usage: ./Receiver.py host_ip port file.txt MWS MSS timeout pdrop seed")
 else:
 	### SET UP VARIABLES ###
-	# initial seq ack numbers
+	# init seq/ack vars
 	seq_num = 0
 	ack_num = 0
+	next_seq_num = 0
+	next_ack_num = 0
 	# sender states
 	state_closed = True
 	state_syn_sent = False
@@ -120,7 +121,7 @@ else:
 	log = open("Sender_log.txt","w")
 
 	# App layer initiates, create socket, store app-layer file
-	print("Sender initiated . . . creating socket object")
+	print("Sender initiated . . .")
 	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed)
 	app_data = sender.stp_send()
 
@@ -131,16 +132,16 @@ else:
 		### CLOSED STATE ###
 		# send SYN seg
 		if state_closed == True:
-			print("=== STATE: CLOSED ===")
+			print("===================== STATE: CLOSED")
 			syn_pkt = sender.make_SYN(seq_num, ack_num)
-			sender.udp_send(syn_pkt)
+			sender.udp_send(syn_pkt); print("Sending SYN")
 			state_closed = False
 			state_syn_sent = True
 
 		### SYN SENT STATE - WAIT FOR SYNACK ###
 		# wait for SYNACK seg
 		if state_syn_sent == True:
-			print("=== STATE: SYN SENT ===")
+			print("===================== STATE: SYN SENT")
 			synack_pkt = sender.stp_rcv()
 			print("synack data = {}".format(synack_pkt.data))
 			print("synack ack = {}".format(synack_pkt.ack))
@@ -148,7 +149,7 @@ else:
 			# received SYNACK -> send ACK -> 3-way-handshake complete
 			if synack_pkt.ack == True and synack_pkt.syn == True:
 				ack_pkt = sender.make_ACK(seq_num, ack_num)
-				sender.udp_send(ack_pkt)
+				sender.udp_send(ack_pkt); print("Sending ACK")
 				print("SYNACK received . . .")
 				state_established = True
 				state_syn_sent = False
@@ -160,7 +161,7 @@ else:
 
 		### TIMEOUT / RESEND STATE ###
 		if state_timeout == True:
-			print("=== STATE: RESEND PACKET ===")
+			print("===================== STATE: RESEND PACKET")
 			packet = curr_packet
 			state = prev_state
 			sender.udp_send(packet)
@@ -169,18 +170,18 @@ else:
 
 		### ESTABLISHED STATE ###
 		if state_established == True:
-			print("=== STATE: CONNECTION ESTABLISHED ===")
+			print("===================== STATE: CONNECTION ESTABLISHED")
 			# manipulate app_data to create separate packets
 			# manipulate app_data to create separate packets
 			# manipulate app_data to create separate packets
-			packet = STPPacket(app_data, 0, 0, ack=False, syn=False, fin=False)		# create packet from data
-			sender.udp_send(packet)													# send packet over UDP
+			packet = STPPacket(app_data, 0, 0, ack=False, syn=False, fin=False)
+			sender.udp_send(packet); print("Sending payload packet")
 			app_data_progress += len(app_data)
 			# whole file has been sent, begin close connection
 			if app_data_progress == len(app_data):
 				# send FIN
 				fin_pkt = sender.make_FIN(seq_num, ack_num)
-				sender.udp_send(fin_pkt); print("FIN SENT")
+				sender.udp_send(fin_pkt); print("Sending FIN")
 				state_end = True
 				state_established = False
 
@@ -245,13 +246,6 @@ else:
 '''
 
 
-
-
-
-
-
-
-
 ################################
 # DATA RECEIVED FROM APP LAYER
 ################################
@@ -271,20 +265,6 @@ else:
 # udt_send(sendpkt)
 # start_timer
 
-##########################
-# WAIT FOR RESPONSE - NAK
-##########################
-
-# if waiting, can't receive more data from app layer = stp_send() can't occur
-
-# ACK response packet comes back
-# stp_rcv(rcvpkt) && isACK
-
-# NAK response packet comes back
-# stp_rcv(rcvpkt) && isNAK
-# retransmit
 
 
-##########################
-# WAIT FOR RESPONSE - NAK
-##########################
+
