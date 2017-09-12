@@ -91,9 +91,22 @@ class Sender:
 	def stp_close(self):
 		self.socket.close()
 
+	# Update Sender_log.txt
+	def update_log(self, action, type, seq, bytes, ack):
+		print("Updating sender log . . .")
+		# include time
+		f = open("Sender_log.txt", "a+")
+		f.write(action)
+		f.close()
+		f = open("Sender_log.txt", "r")
+		print(f.read())
+
 ###################
 #NOTE : CONTROL PACKETS ARE LOSSLESS, REMOVE TIMEOUTS FROM THESE CASES
 ###################
+
+#i wrote an update_log function that takes in the action/type as arguments
+#and called it everywhere, maybe that might be usefvul for you too
 
 ### CHECK CORRECT USAGE ###
 num_args = 9
@@ -116,9 +129,10 @@ else:
 	curr_packet = None
 	# track progress of file sent
 	app_data_progress = 0
-	# grab args, create log.txt
+	# grab args, reset sender_log.txt
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
-	log = open("Sender_log.txt","w")
+	f = open("Sender_log.txt","w")
+	f.close()
 
 	# App layer initiates, create socket, store app-layer file
 	print("Sender initiated . . .")
@@ -134,6 +148,7 @@ else:
 		if state_closed == True:
 			print("===================== STATE: CLOSED")
 			syn_pkt = sender.make_SYN(seq_num, ack_num)
+			sender.update_log("snd", 'S', 0, 0, 0)
 			sender.udp_send(syn_pkt); print("Sending SYN")
 			state_closed = False
 			state_syn_sent = True
