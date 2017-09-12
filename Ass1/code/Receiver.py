@@ -142,7 +142,9 @@ else:
 	port, file = sys.argv[1:]
 	receiver = Receiver(port, file)
 	receiver.socket.bind(('', receiver.port))
-	f = open("Receiver_log.txt","w")
+	f = open("Receiver_log.txt", "w")
+	f.close()
+	f = open("r_test.txt", "w")
 	f.close()
 	print("Receiver is ready . . .")
 

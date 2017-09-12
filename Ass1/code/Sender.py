@@ -34,8 +34,8 @@ class Sender:
 		self.r_host_ip = r_host_ip
 		self.r_port = int(r_port)
 		self.file = file      		# grab file from arg[4]
-		self.MWS = MWS				# max window size
-		self.MSS = MSS 				# max segment size
+		self.MWS = int(MWS)			# max window size
+		self.MSS = int(MSS) 		# max segment size
 		self.timout = timeout
 		self.pdrop = pdrop
 		self.seed = seed
@@ -123,8 +123,20 @@ class Sender:
 		f.write(final_str)
 		f.close()
 
-	def start_timer(self):
+	#def start_timer(self):
 		# do stuff
+
+	def split_data(self, app_data, start):
+		length = len(app_data)
+		# calculate start : end range
+		end = data_progress + self.MSS
+		# not exceeding total size
+		if end < length:
+			payload = app_data[start:end]
+		# exceeding total size
+		else:
+			payload = app_data[start:length]
+		return payload
 
 
 ###################
@@ -152,11 +164,10 @@ else:
 	state_syn_sent = False
 	state_timeout = False
 	state_established = False
+	state_end = False
 	# track states and packets
 	prev_state = None
 	curr_packet = None
-	# track progress of file sent
-	app_data_progress = 0
 	# grab args, reset sender_log.txt
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
 	f = open("Sender_log.txt","w")
@@ -166,6 +177,11 @@ else:
 	print("Sender initiated . . .")
 	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed)
 	app_data = sender.stp_send()
+
+	# track progress of file sent
+	data_progress = 0
+	data_len = len(app_data)
+	print("LEN OF DATA = {}".format(data_len))
 
 	### MAIN LOOP EVENT ###
 	while True:
@@ -214,17 +230,18 @@ else:
 			state_established = True
 
 		### ESTABLISHED STATE ###
+		# send payload segments to receiver until whole file transferred
 		if state_established == True:
 			print("\n===================== STATE: CONNECTION ESTABLISHED")
 			# manipulate app_data to create separate packets
+			payload = sender.split_data(app_data, data_progress)
 			# manipulate app_data to create separate packets
-			# manipulate app_data to create separate packets
-			packet = STPPacket(app_data, 0, 0, ack=False, syn=False, fin=False)
+			packet = STPPacket(payload, 0, 0, ack=False, syn=False, fin=False)
 			sender.udp_send(packet); print("Sending payload packet")
 			sender.update_log("snd", 'D', 0, 0, 0)
-			app_data_progress += len(app_data)
+			data_progress += len(payload)
 			# whole file has been sent, begin close connection
-			if app_data_progress == len(app_data):
+			if data_progress == data_len:
 				# send FIN
 				fin_pkt = sender.make_FIN(seq_num, ack_num)
 				sender.udp_send(fin_pkt); print("Sending FIN")
