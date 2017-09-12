@@ -13,3 +13,4 @@ SampleRTT = amount of time between seg sent / passed to IP -> ack seg received
 -> TCP implementations take only one SampleRTT measurement at a time.
 -> This means a new value of SampleRTT once every RTT.
 -> Only computes SampleRTT for segments that have only been transmitted once (NOT retransmitted)
+

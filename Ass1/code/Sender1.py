@@ -135,7 +135,7 @@ else:
 			prev_state = 'state_closed'
 			print("STATE: CLOSED")
 
-			syn_pkt = STPPacket('1. SYN', seq_num, ack_num, ack=False, syn=True, fin=False)	# create SYN packet
+			syn_pkt = STPPacket(None, seq_num, ack_num, ack=False, syn=True, fin=False)	# create SYN packet
 			curr_packet = syn_pkt 			# set curr pkt = SYN
 			sender.udp_send(syn_pkt)		# send SYN -> receiver
 			state_closed = False
@@ -146,13 +146,10 @@ else:
 			prev_state = 'state_syn_sent'
 			print("STATE: SYN SENT")
 			synack_pkt = sender.stp_rcv()
-			print("synack data = {}".format(synack_pkt.data))
-			print("synack ack = {}".format(synack_pkt.ack))
+			print("synack ack_num = {}".format(synack_pkt.ack_num))
 			print("synack syn = {}".format(synack_pkt.syn))
 			# correct synack segment
-			if synack_pkt.ack == True and synack_pkt.syn == True:
-				packet = STPPacket('3. ACK', 0, 0, ack=True, syn=False, fin=False)
-				sender.udp_send(packet)
+			if synack_pkt.ack_num == 0 and synack_pkt.syn == True:
 				print("SYNACK received . . .")
 				state_established = True
 			# timeout
