@@ -263,7 +263,7 @@ else:
 			print("TIME DIFF = {}").format(time_diff)
 			print("TIMEOUT = {}").format(timeout)
 			# prev packet exists, timeout reached -> retransmit
-			if prev_pkt != None:
+			if prev_pkt != None and time_diff > timeout:
 				print("PACKET RETRANSMITTING")
 				prev_pkt = packet
 				sender.retransmit(packet); num_unacked += 1
@@ -284,9 +284,9 @@ else:
 				print("PACKET DROPPED")
 				num_dropped += 1
 				sender.update_log("drop", 'D', packet)
-				prev_pkt = packet
-				continue
-			# start timer
+				sender.retransmit(packet); num_unacked += 1
+				seq_num += len(payload)
+				num_retransmitted += 1
 			# TIMER = tracking the oldest unacknowledged segment
 			if curr_time == 0:
 				curr_time = time.clock() * 1000
