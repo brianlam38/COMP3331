@@ -52,7 +52,7 @@ class Receiver:
 
 	# add payload to final file
 	def append_payload(self, data):
-		print("Appending packet payload = {}".format(data))
+		#print("Appending packet payload = {}".format(data))
 		f = open("r_test.txt", "a+")
 		f.write(data)
 		f.close()
@@ -86,7 +86,6 @@ class Receiver:
 
 	# Update Receiver_log.txt
 	def update_log(self, action, pkt_type, packet):
-		print("Updating receiver log . . .")
 		# grabbing header fields
 		seq = packet.seq_num
 		ack = packet.ack_num
@@ -96,7 +95,7 @@ class Receiver:
 		curr_time = curr_time * 1000 # convert to MS
 		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
 		# init arrays of args and col lens
-		col_lens = [5, 8, 4, 5, 5, 3]
+		col_lens = [5, 8, 4, 5, 5, 7]
 		args = [action, curr_time, pkt_type, seq, size, ack]
 		# build string
 		final_str = ""
@@ -170,7 +169,7 @@ else:
 			syn_pkt, client_addr = receiver.stp_rcv()
 			receiver.update_log("rcv", 'S', syn_pkt)
 			# acknowledge client SYN
-			ack_num = syn_pkt.seq_num + 1
+			ack_num += 1
 			# creating SYNACK
 			if syn_pkt.syn == True:
 				synack_pkt = receiver.make_SYNACK(seq_num, ack_num)
@@ -199,7 +198,11 @@ else:
 			# grab packets until FIN close request by client
 			while True:
 				packet, client_addr = receiver.stp_rcv()
+				ack_num += len(packet.data)
 				data = packet.data
+				print("SEQUENCE NUMBER   = {}".format(seq_num))
+				print("ACKNOWLDGE NUMBER = {}".format(ack_num))
+				print("RECEIVER SEQ NUM = {}".format(seq_num))
 				# Receive FIN, init close
 				if packet.fin == True:
 					print("FIN initiated by sender . . .")
@@ -209,11 +212,12 @@ else:
 					break
 				# Receive normal seg, check pkt_sn = rcv_sn
 				# Send ACK for packet, increment seq_num by sizeof payload
-				elif True: #packet.seq_num == seq_num:
+				elif packet.seq_num == seq_num:
+					print("PACKET OKAY, SEND ACK")
 					# acknowledge seg, increment seq_num (indicate sizeof payload ack-ing)
 					ack_pkt = receiver.make_ACK(seq_num, ack_num)
 					receiver.udp_send(ack_pkt, client_addr);
-					seq_num += packet.seq_num
+					seq_num += len(packet.data)
 					# add payload to final file
 					data_progress += len(data)
 					receiver.append_payload(data)
@@ -227,14 +231,20 @@ else:
 			print("\n===================== STATE: END OF CONNECTION ")
 			# send ACK + FIN consecutive
 			ack_pkt = receiver.make_ACK(seq_num, ack_num)
+			print("ACK IS: {}".format(ack_pkt.ack_num))
+			print("SEQ IS: {}".format(ack_pkt.seq_num))
 			receiver.udp_send(ack_pkt, client_addr)
+
 			fin_pkt = receiver.make_FIN(seq_num, ack_num)
+			print("ACK IS: {}".format(fin_pkt.ack_num))
+			print("SEQ IS: {}".format(fin_pkt.seq_num))
 			receiver.udp_send(fin_pkt, client_addr)
 			receiver.update_log("snd", 'FA', fin_pkt)
-			# wait for ACK
+
+			# wait for sender ACK
 			ack_pkt, client_addr = receiver.stp_rcv()
 			receiver.update_log("rcv", 'A', ack_pkt)
-			# receive ack, close connection
+			# receive sender ack, close connection
 			if ack_pkt.ack == True:
 				receiver.stp_close()
 				break
