@@ -260,7 +260,7 @@ else:
 			ack_pkt = sender.stp_rcv()
 			sender.update_log("rcv", 'A', ack_pkt)
 			ack_num += len(ack_pkt.data)
-			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
+			if state_end != True and ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
 				print("<<< ACK RECEIVED >>>")
 				num_unacked -= 1
 				sendbase = ack_pkt.ack_num

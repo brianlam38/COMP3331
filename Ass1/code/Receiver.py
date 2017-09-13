@@ -143,6 +143,7 @@ else:
 	state_syn_rcv = False
 	state_synack_sent = False
 	state_established = False
+	state_end = False
 	# grab args, create socket and bind
 	port, file = sys.argv[1:]
 	receiver = Receiver(port, file)
