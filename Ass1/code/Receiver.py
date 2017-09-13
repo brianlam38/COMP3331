@@ -217,6 +217,7 @@ else:
 					# acknowledge seg, increment seq_num (indicate sizeof payload ack-ing)
 					ack_pkt = receiver.make_ACK(seq_num, ack_num)
 					receiver.udp_send(ack_pkt, client_addr);
+					receiver.update_log("snd", 'A', ack_pkt)
 					seq_num += len(packet.data)
 					# add payload to final file
 					data_progress += len(data)
@@ -229,6 +230,8 @@ else:
 		### END OF CONNECTION ###
 		if state_end == True:
 			print("\n===================== STATE: END OF CONNECTION ")
+			# acknowledge FIN
+			ack_num += 1
 			# send ACK + FIN consecutive
 			ack_pkt = receiver.make_ACK(seq_num, ack_num)
 			print("ACK IS: {}".format(ack_pkt.ack_num))

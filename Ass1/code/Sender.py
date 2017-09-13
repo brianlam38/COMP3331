@@ -255,6 +255,17 @@ else:
 				print("<<< TIMER STARTED = {} >>>".format(curr_time))
 			# update data progress and seq_num
 			data_progress += len(payload)
+			# wait for RCV ack
+			print("\n==== STATE: WAITING FOR ACK ===")
+			ack_pkt = sender.stp_rcv()
+			sender.update_log("rcv", 'A', ack_pkt)
+			ack_num += len(ack_pkt.data)
+			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
+				print("<<< ACK RECEIVED >>>")
+				num_unacked -= 1
+				sendbase = ack_pkt.ack_num
+				if num_unacked == 0:
+					curr_time = time.clock() * 1000
 			# whole file has been sent, begin close connection
 			if data_progress == data_len:
 				# send FIN
@@ -263,16 +274,6 @@ else:
 				sender.update_log("snd", 'F', fin_pkt)
 				state_end = True
 				state_established = False
-			# wait for RCV ack
-			print("\n==== STATE: WAITING FOR ACK ===")
-			ack_pkt = sender.stp_rcv()
-			ack_num += len(ack_pkt.data)
-			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
-				print("<<< ACK RECEIVED >>>")
-				num_unacked -= 1
-				sendbase = ack_pkt.ack_num
-				if num_unacked == 0:
-					curr_time = time.clock() * 1000
 
 
 		### END OF CONNECTION ###
@@ -290,6 +291,9 @@ else:
 				sender.update_log("rcv", 'FA', fin_pkt)
 				# received FIN -> send ACK + wait 30 seconds
 				if fin_pkt.fin == True:
+					# acknowledge FINACK
+					ack_num += 1
+					# send ACK
 					ack_pkt = sender.make_ACK(seq_num, ack_num)
 					sender.udp_send(ack_pkt)
 					sender.update_log("snd", 'A', ack_pkt)
@@ -302,7 +306,6 @@ else:
 	print("\n### FINAL SENDER LOG ###")
 	f = open("Sender_log.txt", "r")
 	print(f.read())
-	print(data_progress)
 
 	### TIMEOUT ###
 	#while True:
