@@ -5,18 +5,6 @@
 #
 # Author: Brian Lam
 
-# Sender -> Packet (seq = 10) -> Receiver
-# if match seq number
-# 		keep packet
-#		send back ACK indicating next packet with 10 + len(data)
-# else
-#		discard packet (or buffer)
-
-# Example: Sender
-# (seq 1) get ACK 11 -> send which packet to repeat
-# (seq 11)
-# (seq 21)
-
 import pickle
 import sys
 import time
@@ -120,9 +108,9 @@ class Receiver:
 		f.write(final_str)
 		f.close()
 
-###################
-# MAIN FUNCTION???
-###################
+################
+# MAIN FUNCTION
+################
 
 # Check correct usage
 num_args = 3
@@ -226,7 +214,9 @@ else:
 					receiver.update_log("rcv", 'D', packet)
 				# Out of order packet, put in buffer
 				else:
-					print("Out of order, put in buffer")
+					print("OUT OF ORDER: ADD PACKET TO BUFFER")
+					# add packet to buffer
+					#pkt_buffer[packet.seq_number] = packet
 
 		### END OF CONNECTION ###
 		if state_end == True:
