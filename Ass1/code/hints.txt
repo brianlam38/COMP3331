@@ -1,4 +1,9 @@
-Sender -> seq = 10 -> Receiver ? match rec seq-num ? good (keep packet) : otherwise, discard packet (or buffer) -> send back ack with ack number 10 (seq is number of thing it's expecting)
+Sender -> seq = 10 -> Receiver
+if match rec seq-num:
+	good (keep packet)
+else:
+	discard packet (or buffer)
+	send back ack with ack number 10 (seq is number of thing it's expecting)
 if good, Receiver sends Sender an ack indicating next packet with number 10 + len(data)
 sender also needs sequence number
 Sender
