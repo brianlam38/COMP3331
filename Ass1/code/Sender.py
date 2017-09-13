@@ -37,8 +37,8 @@ class Sender:
 		self.MWS = int(MWS)			# max window size
 		self.MSS = int(MSS) 		# max segment size
 		self.timout = timeout
-		self.pdrop = pdrop
-		self.seed = seed
+		self.pdrop = float(pdrop)
+		self.seed = int(seed)
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
@@ -102,7 +102,7 @@ class Sender:
 		args = [action, curr_time, pkt_type, seq, size, ack]
 		# build string
 		final_str = ""
-		counter = 0
+		counter = 0	
 		# loop through columns
 		for c in col_lens:
 			arg_len = len(args[counter])
