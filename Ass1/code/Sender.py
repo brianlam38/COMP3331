@@ -68,19 +68,19 @@ class Sender:
 	# create SYN
 	def make_SYN(self, seq_num, ack_num):
 		print("Creating SYN")
-		SYN = STPPacket('SYN', seq_num, ack_num, ack=False, syn=True, fin=False)
+		SYN = STPPacket('', seq_num, ack_num, ack=False, syn=True, fin=False)
 		return SYN
 
 	# create ACK
 	def make_ACK(self, seq_num, ack_num):
 		print("Creating ACK")
-		ACK = STPPacket('ACK', seq_num, ack_num, ack=True, syn=False, fin=False)
+		ACK = STPPacket('', seq_num, ack_num, ack=True, syn=False, fin=False)
 		return ACK
 
 	# create FIN
 	def make_FIN(self, seq_num, ack_num):
 		print("Creating FIN")
-		FIN = STPPacket('FIN', seq_num, ack_num, ack=False, syn=False, fin=True)
+		FIN = STPPacket('', seq_num, ack_num, ack=False, syn=False, fin=True)
 		return FIN
 
 	# send segment over UDP
@@ -94,11 +94,11 @@ class Sender:
 	# Update Sender_log.txt
 	def update_log(self, action, pkt_type, seq, size, ack):
 		print("Updating sender log . . .")
-		curr_time = time.clock() 	 # temp timer
-		curr_time = curr_time * 1000 # convert to MS
+		curr_time = time.clock()
+		curr_time = curr_time * 1000
 		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
 		# init arrays of args and col lens
-		col_lens = [5, 7, 4, 4, 3, 3]
+		col_lens = [5, 8, 4, 5, 5, 3]
 		args = [action, curr_time, pkt_type, seq, size, ack]
 		# build string
 		final_str = ""
@@ -138,6 +138,10 @@ class Sender:
 			payload = app_data[start:length]
 		return payload
 
+	#def check_time(self):
+	#	curr_time = time.clock()
+	#	curr_time = curr_time * 1000
+
 
 ###################
 #NOTE : CONTROL PACKETS ARE LOSSLESS, REMOVE TIMEOUTS FROM THESE CASES
@@ -153,7 +157,8 @@ if len(sys.argv) != num_args:
 else:
 	### SET UP VARIABLES ###
 	# timing vars
-	timer = 0
+	curr_time = 0
+	timeout = 0
 	# init seq/ack vars
 	seq_num = 0
 	ack_num = 0
@@ -170,6 +175,7 @@ else:
 	curr_packet = None
 	# grab args, reset sender_log.txt
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
+
 	f = open("Sender_log.txt","w")
 	f.close()
 
@@ -193,7 +199,7 @@ else:
 			print("\n===================== STATE: CLOSED")
 			syn_pkt = sender.make_SYN(seq_num, ack_num)
 			sender.udp_send(syn_pkt); print("Sending SYN")
-			sender.update_log("snd", 'S', 0, 0, 0)
+			sender.update_log("snd", 'S', seq_num, 0, ack_num)
 			state_closed = False
 			state_syn_sent = True
 
@@ -202,16 +208,18 @@ else:
 		if state_syn_sent == True:
 			print("\n===================== STATE: SYN SENT")
 			synack_pkt = sender.stp_rcv()
-			sender.update_log("rcv", 'SA', 0, 0, 0)
-			print("synack data = {}".format(synack_pkt.data))
-			print("synack ack = {}".format(synack_pkt.ack))
-			print("synack syn = {}".format(synack_pkt.syn))
-			# received SYNACK -> send ACK -> 3-way-handshake complete
+			# check if SYNACK
 			if synack_pkt.ack == True and synack_pkt.syn == True:
+				# acknowledge SYNACK, update log
+				ack_num = synack_pkt.seq_num + 1
+				sender.update_log("rcv", 'SA', seq_num, 0, ack_num)
+				# send ACK
+				seq_num += 1
 				ack_pkt = sender.make_ACK(seq_num, ack_num)
 				sender.udp_send(ack_pkt); print("Sending ACK")
-				sender.update_log("snd", 'A', 0, 0, 0)
+				sender.update_log("snd", 'A', seq_num, 0, ack_num)
 				print("SYNACK received . . .")
+				# 3-way-handshake complete
 				state_established = True
 				state_syn_sent = False
 			# timeout
@@ -236,16 +244,23 @@ else:
 			# manipulate app_data to create separate packets
 			payload = sender.split_data(app_data, data_progress)
 			# manipulate app_data to create separate packets
-			packet = STPPacket(payload, 0, 0, ack=False, syn=False, fin=False)
+			packet = STPPacket(payload, seq_num, ack_num, ack=False, syn=False, fin=False)
 			sender.udp_send(packet); print("Sending payload packet")
-			sender.update_log("snd", 'D', 0, 0, 0)
+			sender.update_log("snd", 'D', seq_num, len(payload), ack_num)
+			# start timer
+			if curr_time == 0:
+				curr_time = time.clock() * 1000
+				print("<<< TIMER STARTED = {} >>>".format(curr_time))
+			# update data progress and log
 			data_progress += len(payload)
+			# update seq num
+			seq_num += len(payload)
 			# whole file has been sent, begin close connection
 			if data_progress == data_len:
 				# send FIN
 				fin_pkt = sender.make_FIN(seq_num, ack_num)
 				sender.udp_send(fin_pkt); print("Sending FIN")
-				sender.update_log("snd", 'F', 0, 0, 0)
+				sender.update_log("snd", 'F', seq_num, 0, ack_num)
 				state_end = True
 				state_established = False
 
@@ -257,12 +272,12 @@ else:
 			# received ACK -> wait for FIN
 			if ack_pkt.ack == True:
 				fin_pkt = sender.stp_rcv()
-				sender.update_log("rcv", 'FA', 0, 0, 0)
+				sender.update_log("rcv", 'FA', seq_num, 0, ack_num)
 				# received FIN -> send ACK + wait 30 seconds
 				if fin_pkt.fin == True:
 					ack_pkt = sender.make_ACK(seq_num, ack_num)
 					sender.udp_send(ack_pkt)
-					sender.update_log("snd", 'A', 0, 0, 0)
+					sender.update_log("snd", 'A', seq_num, 0, ack_num)
 					print("Waiting 30 seconds")
 					#time.sleep(30)
 					break

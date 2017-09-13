@@ -19,6 +19,7 @@
 
 import pickle
 import sys
+import time
 from socket import *
 
 class STPPacket:
@@ -59,19 +60,19 @@ class Receiver:
 	# create SYNACK
 	def make_SYNACK(self, seq_num, ack_num):
 		print("Creating SYNACK")
-		SYNACK = STPPacket('SYNACK', seq_num, ack_num, ack=True, syn=True, fin=False)
+		SYNACK = STPPacket('', seq_num, ack_num, ack=True, syn=True, fin=False)
 		return SYNACK
 
 	# create ACK
 	def make_ACK(self, seq_num, ack_num):
 		print("Creating ACK")
-		ACK = STPPacket('ACK', seq_num, ack_num, ack=True, syn=False, fin=False)
+		ACK = STPPacket('', seq_num, ack_num, ack=True, syn=False, fin=False)
 		return ACK
 
 	# create FIN
 	def make_FIN(self, seq_num, ack_num):
 		print("Creating FIN")
-		FIN = STPPacket('FIN', seq_num, ack_num, ack=False, syn=False, fin=True)
+		FIN = STPPacket('', seq_num, ack_num, ack=False, syn=False, fin=True)
 		return FIN
 
 	# send segment over UDP
@@ -85,12 +86,12 @@ class Receiver:
 
 	# Update Receiver_log.txt
 	def update_log(self, action, pkt_type, seq, size, ack):
-		print("Updating sender log . . .")
+		print("Updating receiver log . . .")
 		curr_time = time.clock() 	 # temp timer
 		curr_time = curr_time * 1000 # convert to MS
 		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
 		# init arrays of args and col lens
-		col_lens = [5, 7, 4, 4, 3, 3]
+		col_lens = [5, 8, 4, 5, 5, 3]
 		args = [action, curr_time, pkt_type, seq, size, ack]
 		# build string
 		final_str = ""
@@ -138,10 +139,13 @@ else:
 	state_syn_rcv = False
 	state_synack_sent = False
 	state_established = False
-	# grab args, create socket, bind and reset log.txt
+	# grab args, create socket and bind
 	port, file = sys.argv[1:]
 	receiver = Receiver(port, file)
 	receiver.socket.bind(('', receiver.port))
+	# track progress of file sent
+	data_progress = 0
+	# reset log and final file
 	f = open("Receiver_log.txt", "w")
 	f.close()
 	f = open("r_test.txt", "w")
@@ -157,10 +161,16 @@ else:
 		if state_listen == True:
 			print("\n===================== STATE: LISTEN")
 			syn_pkt, client_addr = receiver.stp_rcv()
+			receiver.update_log("rcv", 'S', seq_num, 0, syn_pkt.seq_num)
+			# acknowledge client SYN
+			ack_num = syn_pkt.seq_num + 1
 			# creating SYNACK
 			if syn_pkt.syn == True:
 				synack_pkt = receiver.make_SYNACK(seq_num, ack_num)
 				receiver.udp_send(synack_pkt, client_addr); print("Sending SYNACK")
+				receiver.update_log("snd", 'SA', seq_num, 0, ack_num)
+				# increment seq for SYNACK
+				seq_num += 1
 				state_synack_sent = True
 				state_listen = False
 
@@ -169,6 +179,8 @@ else:
 		if state_synack_sent == True:
 			print("\n===================== STATE: SYNACK SENT")
 			ack_pkt, client_addr = receiver.stp_rcv()
+			receiver.update_log("rcv", 'A', seq_num, 0, ack_pkt.seq_num)
+
 			# ACK received, 3-way-established
 			if ack_pkt.ack == True:
 				state_established = True
@@ -184,24 +196,28 @@ else:
 				# Receive FIN, init close
 				if packet.fin == True:
 					print("FIN initiated by sender . . .")
-					# send ACK
-					ack_pkt = receiver.make_ACK(seq_num, ack_num)
-					receiver.udp_send(ack_pkt, client_addr); print("Sending ACK")
+					receiver.update_log("rcv", 'F', seq_num, len(data), packet.seq_num)
 					state_end = True
 					state_established = False
 					break
 				# Receive normal seg, add payload to final file
 				else:
+					data_progress += len(data)
 					receiver.append_payload(data)
+					receiver.update_log("rcv", 'D', seq_num, len(data), packet.seq_num)
 
 		### END OF CONNECTION ###
 		if state_end == True:
 			print("\n===================== STATE: END OF CONNECTION ")
-			# send FIN
+			# send ACK + FIN consecutive
+			ack_pkt = receiver.make_ACK(seq_num, ack_num)
+			receiver.udp_send(ack_pkt, client_addr); print("Sending ACK")
 			fin_pkt = receiver.make_FIN(seq_num, ack_num)
 			receiver.udp_send(fin_pkt, client_addr); print("Sending FIN")
+			receiver.update_log("snd", 'FA', seq_num, 0, ack_num)
 			# wait for ACK
 			ack_pkt, client_addr = receiver.stp_rcv()
+			receiver.update_log("rcv", 'A', seq_num, 0, ack_num)
 			# receive ack, close connection
 			if ack_pkt.ack == True:
 				receiver.stp_close()
@@ -210,7 +226,10 @@ else:
 	print("\n### FINAL FILE.TXT CONTENT ###")
 	f = open("r_test.txt","r")
 	print(f.read())
-	# everything finished -> close connection
+
+	print("\n### FINAL RECEIVER LOG ###")
+	f = open("Receiver_log.txt", "r")
+	print(f.read())
 
 
 # on receive
