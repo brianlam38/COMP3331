@@ -24,10 +24,11 @@ class STPPacket:
 
 class PLD:
 	def __init__(self, pdrop):
-		self.pdrop = float(pdrop)
+		self.pdrop = pdrop
 
 	def exe_pld(self):
 		rand = random()
+		rand = str(rand)
 		if rand > self.pdrop:
 			return True
 		else:
@@ -42,11 +43,9 @@ class Sender:
 		self.file = file      		# grab file from arg[4]
 		self.MWS = int(MWS)			# max window size
 		self.MSS = int(MSS) 		# max segment size
-		self.timeout = int(timeout)
+		self.timout = timeout
 		self.pdrop = pdrop
 		self.seed = int(seed)
-		self.curr_time = 0
-		self.prev_time = 0
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
@@ -112,9 +111,9 @@ class Sender:
 		ack = packet.ack_num
 		size = len(packet.data)
 		# clocking time
-		#curr_time = time.clock()
-		#curr_time = curr_time * 1000
-		curr_time = str(self.curr_time); seq = str(seq); size = str(size); ack = str(ack)
+		curr_time = time.clock()
+		curr_time = curr_time * 1000
+		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
 		# init arrays of args and col lens
 		col_lens = [5, 8, 4, 5, 5, 3]
 		args = [action, curr_time, pkt_type, seq, size, ack]
@@ -153,11 +152,9 @@ class Sender:
 			payload = app_data[start:length]
 		return payload
 
-	def clock_time(self):
-		self.curr_time = time.clock() * 1000
-
-	def store_time(self):
-		self.prev_time = time.clock() * 1000
+	#def check_time(self):
+	#	curr_time = time.clock()
+	#	curr_time = curr_time * 1000
 
 
 ### CHECK CORRECT USAGE ###
@@ -187,6 +184,10 @@ else:
 	num_dropped = 0
 	# grab args
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
+	# timing vars
+	curr_time = 0
+	prev_time = 0
+	timeout = timeout
 	# reset sender_log.txt
 	f = open("Sender_log.txt","w")
 	f.close()
@@ -246,47 +247,41 @@ else:
 			payload = sender.split_data(app_data, data_progress)
 			packet = STPPacket(payload, seq_num, ack_num, ack=False, syn=False, fin=False)
 			# time between last packet and this packet
-			#sender.clock_time()
-			time_diff = sender.prev_time - sender.curr_time
-			print("CURR TIME = {}").format(sender.curr_time)
-			print("PREV TIME = {}").format(sender.prev_time)
+			curr_time = time.clock() * 1000
+			time_diff = curr_time - prev_time
+			print("CURR TIME = {}").format(curr_time)
+			print("PREV TIME = {}").format(prev_time)
 			print("TIME DIFF = {}").format(time_diff)
-			print("TIMEOUT = {}").format(sender.timeout)
+			print("TIMEOUT = {}").format(timeout)
 			# prev packet exists, timeout reached -> retransmit
-			# wait for packet retransmission
-			if num_unacked != 0:
-				print("REMAINING PACKETS EXIST")
-				# grab oldest packet
-				
-				# check if timeout has been reached
-				if prev_pkt != None and time_diff > sender.timeout:
-					print("PACKET RETRANSMITTING")
-					prev_pkt = packet
-					sender.retransmit(packet); #num_unacked += 1
-					seq_num += len(payload)
-					num_retransmitted += 1
-					prev_pkt = None
-					continue
+			if prev_pkt != None and time_diff > timeout:
+				print("PACKET RETRANSMITTING")
+				prev_pkt = packet
+				sender.retransmit(packet); num_unacked += 1
+				seq_num += len(payload)
+				num_retransmitted += 1
+				prev_pkt = None
+				continue
 			# pass packet through PLD
 			result = pld.exe_pld()
 			if result == True:
-				# TIMER = tracking the oldest unacknowledged segment
-				if sender.curr_time == 0:
-					sender.clock_time()
-					print("<<< TIMER STARTED = {} >>>".format(sender.curr_time))
 				print("PACKET SENT SUCCESSFULLY")
 				sender.udp_send(packet); num_unacked += 1
 				seq_num += len(payload)
 				sender.update_log("snd", 'D', packet)
 				num_transmitted += 1
 			else:
-				sender.store_time()
+				prev_time = time.clock() * 1000
 				print("PACKET DROPPED")
 				num_dropped += 1
 				sender.update_log("drop", 'D', packet)
-				sender.retransmit(packet); #num_unacked += 1
+				sender.retransmit(packet); num_unacked += 1
 				seq_num += len(payload)
 				num_retransmitted += 1
+			# TIMER = tracking the oldest unacknowledged segment
+			if curr_time == 0:
+				curr_time = time.clock() * 1000
+				print("<<< TIMER STARTED = {} >>>".format(curr_time))
 			# update data progress and seq_num
 			data_progress += len(payload)
 			# wait for RCV ack
@@ -294,12 +289,12 @@ else:
 			ack_pkt = sender.stp_rcv()
 			sender.update_log("rcv", 'A', ack_pkt)
 			ack_num += len(ack_pkt.data)
-			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
+			if state_end != True and ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
 				print("<<< ACK RECEIVED >>>")
 				num_unacked -= 1
 				sendbase = ack_pkt.ack_num
 				if num_unacked == 0:
-					sender.clock_time()
+					curr_time = time.clock() * 1000
 			# whole file has been sent, begin close connection
 			if data_progress == data_len:
 				# send FIN

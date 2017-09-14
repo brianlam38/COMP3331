@@ -8,6 +8,7 @@
 import pickle
 import sys
 import time
+from random import *
 from socket import *
 
 # python sender.py receiver_host_ip receiver_port file.txt MWS MSS timeout pdrop seed
@@ -21,13 +22,18 @@ class STPPacket:
 		self.syn = syn
 		self.fin = fin
 
-class Sender:
-	# a lot more complicated, but just follow the assignment spec
-	# you can do go-back-N, selective repeat, whatever works
-	# also need sequence number
+class PLD:
+	def __init__(self, pdrop):
+		self.pdrop = float(pdrop)
 
-	# NextSeqNum = InitialSeqNumber
-	# SendBase = InitialSeqNumber
+	def exe_pld(self):
+		rand = random()
+		if rand > self.pdrop:
+			return True
+		else:
+			return False
+
+class Sender:
 
 	# initialise sender data
 	def __init__(self, r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed):
@@ -36,9 +42,11 @@ class Sender:
 		self.file = file      		# grab file from arg[4]
 		self.MWS = int(MWS)			# max window size
 		self.MSS = int(MSS) 		# max segment size
-		self.timout = timeout
-		self.pdrop = float(pdrop)
+		self.timeout = int(timeout)
+		self.pdrop = pdrop
 		self.seed = int(seed)
+		self.curr_time = 0
+		self.prev_time = 0
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
@@ -91,6 +99,11 @@ class Sender:
 	def stp_close(self):
 		self.socket.close()
 
+	# retransmit
+	def retransmit(self, packet):
+		self.socket.sendto(pickle.dumps(packet), (self.r_host_ip, self.r_port))
+		sender.update_log("snd", 'D', packet)
+
 	# Update Sender_log.txt
 	def update_log(self, action, pkt_type, packet):
 		print("Updating sender log . . .")
@@ -99,9 +112,9 @@ class Sender:
 		ack = packet.ack_num
 		size = len(packet.data)
 		# clocking time
-		curr_time = time.clock()
-		curr_time = curr_time * 1000
-		curr_time = str(curr_time); seq = str(seq); size = str(size); ack = str(ack)
+		#curr_time = time.clock()
+		#curr_time = curr_time * 1000
+		curr_time = str(self.curr_time); seq = str(seq); size = str(size); ack = str(ack)
 		# init arrays of args and col lens
 		col_lens = [5, 8, 4, 5, 5, 3]
 		args = [action, curr_time, pkt_type, seq, size, ack]
@@ -128,9 +141,6 @@ class Sender:
 		f.write(final_str)
 		f.close()
 
-	#def start_timer(self):
-		# do stuff
-
 	def split_data(self, app_data, start):
 		length = len(app_data)
 		# calculate start : end range
@@ -143,17 +153,12 @@ class Sender:
 			payload = app_data[start:length]
 		return payload
 
-	#def check_time(self):
-	#	curr_time = time.clock()
-	#	curr_time = curr_time * 1000
+	def clock_time(self):
+		self.curr_time = time.clock() * 1000
 
+	def store_time(self):
+		self.prev_time = time.clock() * 1000
 
-###################
-#NOTE : CONTROL PACKETS ARE LOSSLESS, REMOVE TIMEOUTS FROM THESE CASES
-###################
-
-#i wrote an update_log function that takes in the action/type as arguments
-#and called it everywhere, maybe that might be usefvul for you too
 
 ### CHECK CORRECT USAGE ###
 num_args = 9
@@ -161,9 +166,6 @@ if len(sys.argv) != num_args:
 	print("Usage: ./Receiver.py host_ip port file.txt MWS MSS timeout pdrop seed")
 else:
 	### SET UP VARIABLES ###
-	# timing vars
-	curr_time = 0
-	timeout = 0
 	# init seq/ack vars
 	seq_num = 0
 	ack_num = 0
@@ -173,15 +175,19 @@ else:
 	state_closed = True
 	state_syn_sent = False
 	state_timeout = False
-	state_established_1 = False # send segment
-	state_established_2 = False # wait for receiver ACK
+	state_established = False # send segment
 	state_end = False
 	# track states and packets
 	prev_state = None
 	curr_packet = None
-	# grab args, reset sender_log.txt
+	prev_pkt = None
+	# track packet progress
+	num_transmitted = 0
+	num_retransmitted = 0
+	num_dropped = 0
+	# grab args
 	r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed = sys.argv[1:]
-
+	# reset sender_log.txt
 	f = open("Sender_log.txt","w")
 	f.close()
 
@@ -194,6 +200,9 @@ else:
 	data_progress = 0
 	data_len = len(app_data)
 	print("LEN OF DATA = {}".format(data_len))
+
+	# Create PLD
+	pld = PLD(pdrop)
 
 	### MAIN LOOP EVENT ###
 	while True:
@@ -226,38 +235,71 @@ else:
 				sender.update_log("snd", 'A', ack_pkt)
 				print("SYNACK received . . .")
 				# 3-way-handshake complete
-				state_established_1 = True
+				state_established = True
 				state_syn_sent = False
-
-		### TIMEOUT / RESEND STATE ###
-		if state_timeout == True:
-			print("\n===================== STATE: RESEND PACKET")
-			packet = curr_packet
-			state = prev_state
-			sender.udp_send(packet)
-			state_timeout = False
-			state_established_1 = True
 
 		### ESTABLISHED STATE ###
 		# send payload segments to receiver until whole file transferred
-		if state_established_1 == True:
+		if state_established == True:
 			print("\n===================== STATE: CONNECTION ESTABLISHED")
-			# manipulate app_data to create separate packets
+			# grab MSS data, then create packet
 			payload = sender.split_data(app_data, data_progress)
-			# manipulate app_data to create separate packets
 			packet = STPPacket(payload, seq_num, ack_num, ack=False, syn=False, fin=False)
-			sender.udp_send(packet); num_unacked += 1
-			sender.update_log("snd", 'D', packet)
-			# start timer
-			# TIMER = tracking the oldest unacknowledged segment
-			if curr_time == 0:
-				curr_time = time.clock() * 1000
-				print("<<< TIMER STARTED = {} >>>".format(curr_time))
-				# begin receiving ACKs from receiver
-				state_established_2 = True
+			# time between last packet and this packet
+			#sender.clock_time()
+			time_diff = sender.prev_time - sender.curr_time
+			print("CURR TIME = {}").format(sender.curr_time)
+			print("PREV TIME = {}").format(sender.prev_time)
+			print("TIME DIFF = {}").format(time_diff)
+			print("TIMEOUT = {}").format(sender.timeout)
+			# prev packet exists, timeout reached -> retransmit
+			# wait for packet retransmission
+			if num_unacked != 0:
+				print("REMAINING PACKETS EXIST")
+				# grab oldest packet
+				
+				# check if timeout has been reached
+				if prev_pkt != None and time_diff > sender.timeout:
+					print("PACKET RETRANSMITTING")
+					prev_pkt = packet
+					sender.retransmit(packet); #num_unacked += 1
+					seq_num += len(payload)
+					num_retransmitted += 1
+					prev_pkt = None
+					continue
+			# pass packet through PLD
+			result = pld.exe_pld()
+			if result == True:
+				# TIMER = tracking the oldest unacknowledged segment
+				if sender.curr_time == 0:
+					sender.clock_time()
+					print("<<< TIMER STARTED = {} >>>".format(sender.curr_time))
+				print("PACKET SENT SUCCESSFULLY")
+				sender.udp_send(packet); num_unacked += 1
+				seq_num += len(payload)
+				sender.update_log("snd", 'D', packet)
+				num_transmitted += 1
+			else:
+				sender.store_time()
+				print("PACKET DROPPED")
+				num_dropped += 1
+				sender.update_log("drop", 'D', packet)
+				sender.retransmit(packet); #num_unacked += 1
+				seq_num += len(payload)
+				num_retransmitted += 1
 			# update data progress and seq_num
 			data_progress += len(payload)
-			seq_num += len(payload)
+			# wait for RCV ack
+			print("\n==== STATE: WAITING FOR ACK ===")
+			ack_pkt = sender.stp_rcv()
+			sender.update_log("rcv", 'A', ack_pkt)
+			ack_num += len(ack_pkt.data)
+			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
+				print("<<< ACK RECEIVED >>>")
+				num_unacked -= 1
+				sendbase = ack_pkt.ack_num
+				if num_unacked == 0:
+					sender.clock_time()
 			# whole file has been sent, begin close connection
 			if data_progress == data_len:
 				# send FIN
@@ -265,31 +307,26 @@ else:
 				sender.udp_send(fin_pkt)
 				sender.update_log("snd", 'F', fin_pkt)
 				state_end = True
-				state_established_1 = False
-
-		### ESTABLISHED STATE: WAIT FOR RCV ACK ###
-		# wait for ack_pkt
-		if state_established_2 == True:
-			print("\n==== STATE: WAITING FOR ACK ===")
-			ack_pkt = sender.stp_rcv()
-			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
-				print("<<< ACK RECEIVED >>>")
-				num_unacked -= 1;
-				sendbase = ack_pkt.ack_num
-				if num_unacked == 0:
-					curr_time = time.clock() * 1000
+				state_established = False
 
 		### END OF CONNECTION ###
 		# wait for ACK
 		if state_end == True:
 			print("\n=== STATE: END OF CONNECTION ===")
 			ack_pkt = sender.stp_rcv() # ACK log combined with FIN below
+			print("ACK IS: {}".format(ack_pkt.ack_num))
+			print("SEQ IS: {}".format(ack_pkt.seq_num))
 			# received ACK -> wait for FIN
 			if ack_pkt.ack == True:
 				fin_pkt = sender.stp_rcv()
+				print("ACK IS: {}".format(fin_pkt.ack_num))
+				print("SEQ IS: {}".format(fin_pkt.seq_num))
 				sender.update_log("rcv", 'FA', fin_pkt)
 				# received FIN -> send ACK + wait 30 seconds
 				if fin_pkt.fin == True:
+					# acknowledge FINACK
+					ack_num += 1
+					# send ACK
 					ack_pkt = sender.make_ACK(seq_num, ack_num)
 					sender.udp_send(ack_pkt)
 					sender.update_log("snd", 'A', ack_pkt)
@@ -300,19 +337,19 @@ else:
 	sender.stp_close()
 	# print out complete log
 	print("\n### FINAL SENDER LOG ###")
+	f = open("Sender_log.txt", "a+")
+	data = "Data Transferred = {} bytes\n".format(data_len)
+	seg_sent = "Segments Sent = {}\n".format(num_transmitted)
+	pkt_dropped = "Packets Dropped = {}\n".format(num_dropped)
+	pkt_delayed = "Packets Delayed = N/A\n"
+	seg_retrans = "Segments Retrans = {}\n".format(num_retransmitted)
+	ack_duplicate = "Duplicate Acks = N/A"
+	final_str = "\n" + data + seg_sent + pkt_dropped + pkt_delayed + seg_retrans + ack_duplicate
+	f.write(final_str)
+	f.close()
 	f = open("Sender_log.txt", "r")
 	print(f.read())
-
-
-	### TIMEOUT ###
-	#while True:
-	#	try:
-	#		print("waiting . . .")
-	#		sender.socket.settimeout(2)
-	#	except timeout:
-	#		print("Connection closed")
-	#		break
-	#break
+	f.close()
 
 		# elif timer = timeout, resend packet
 		#		syn_pkt = sender.make_pkt(None, seq_num, ack_num, ack=False, syn=True, fin=False)
