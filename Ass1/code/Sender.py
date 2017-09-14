@@ -47,6 +47,7 @@ class Sender:
 		self.seed = int(seed)
 		self.curr_time = 0
 		self.prev_time = 0
+		self.start_time = 0
 
 	# create UDP socket
 	socket = socket(AF_INET, SOCK_DGRAM)
@@ -106,18 +107,16 @@ class Sender:
 
 	# Update Sender_log.txt
 	def update_log(self, action, pkt_type, packet):
-		print("Updating sender log . . .")
 		# grabbing header fields
 		seq = packet.seq_num
 		ack = packet.ack_num
 		size = len(packet.data)
 		# clocking time
-		#curr_time = time.clock()
-		#curr_time = curr_time * 1000
-		curr_time = str(self.curr_time); seq = str(seq); size = str(size); ack = str(ack)
+		log_time = time.clock() * 1000
+		log_time = str(log_time); seq = str(seq); size = str(size); ack = str(ack)
 		# init arrays of args and col lens
 		col_lens = [5, 8, 4, 5, 5, 3]
-		args = [action, curr_time, pkt_type, seq, size, ack]
+		args = [action, log_time, pkt_type, seq, size, ack]
 		# build string
 		final_str = ""
 		counter = 0	
@@ -141,6 +140,7 @@ class Sender:
 		f.write(final_str)
 		f.close()
 
+	# Maximum Segment Size Feature
 	def split_data(self, app_data, start):
 		length = len(app_data)
 		# calculate start : end range
@@ -153,11 +153,17 @@ class Sender:
 			payload = app_data[start:length]
 		return payload
 
+	# Record time
 	def clock_time(self):
 		self.curr_time = time.clock() * 1000
 
+	# Store time
 	def store_time(self):
 		self.prev_time = time.clock() * 1000
+
+	# Time of oldest unacknowledged packet
+	def start_timer(self):
+		self.start_time = time.clock() * 1000
 
 
 ### CHECK CORRECT USAGE ###
@@ -196,6 +202,10 @@ else:
 	sender = Sender(r_host_ip, r_port, file, MWS, MSS, timeout, pdrop, seed)
 	app_data = sender.stp_send()
 
+	# track curr MSS and store unacked packets
+	curr_mss = 0
+	pkt_store = {}
+
 	# track progress of file sent
 	data_progress = 0
 	data_len = len(app_data)
@@ -233,7 +243,6 @@ else:
 				ack_pkt = sender.make_ACK(seq_num, ack_num)
 				sender.udp_send(ack_pkt)
 				sender.update_log("snd", 'A', ack_pkt)
-				print("SYNACK received . . .")
 				# 3-way-handshake complete
 				state_established = True
 				state_syn_sent = False
@@ -242,38 +251,46 @@ else:
 		# send payload segments to receiver until whole file transferred
 		if state_established == True:
 			print("\n===================== STATE: CONNECTION ESTABLISHED")
-			# grab MSS data, then create packet
-			payload = sender.split_data(app_data, data_progress)
-			packet = STPPacket(payload, seq_num, ack_num, ack=False, syn=False, fin=False)
-			# time between last packet and this packet
-			#sender.clock_time()
-			time_diff = sender.prev_time - sender.curr_time
-			print("CURR TIME = {}").format(sender.curr_time)
-			print("PREV TIME = {}").format(sender.prev_time)
-			print("TIME DIFF = {}").format(time_diff)
-			print("TIMEOUT = {}").format(sender.timeout)
+
 			# prev packet exists, timeout reached -> retransmit
 			# wait for packet retransmission
 			if num_unacked != 0:
+				print("NUM UNACKED = {}".format(num_unacked))
 				print("REMAINING PACKETS EXIST")
+				# loop through dict to grab lowest key/time
+				oldest = 1000000
+				for key in pkt_store:
+					print("KEY = {}".format(key))
+					if oldest > key:
+						oldest = key
 				# grab oldest packet
-				
+				if (pkt_store.has_key(oldest)):
+					print("OLDEST PACKET TIME = {}".format(oldest))
+					retrans_pkt = pkt_store.get(oldest)
+					print("OLDEST PACKET SEQ_NUM = {}".format(retrans_pkt.seq_num))
+				# calculate time diff
+				time_diff = sender.prev_time - sender.start_time
+				print("OLDEST TIME = {}").format(sender.start_time)
+				print("PREV TIME = {}").format(sender.prev_time)
+				print("TIME DIFF = {}").format(time_diff)
+				print("TIMEOUT = {}").format(sender.timeout)
 				# check if timeout has been reached
-				if prev_pkt != None and time_diff > sender.timeout:
-					print("PACKET RETRANSMITTING")
-					prev_pkt = packet
-					sender.retransmit(packet); #num_unacked += 1
+				if time_diff > sender.timeout:
+					print("====================== PACKET RETRANSMITTING")
+					sender.retransmit(packet); num_unacked += 1
 					seq_num += len(payload)
 					num_retransmitted += 1
-					prev_pkt = None
 					continue
+			# Create packet
+			payload = sender.split_data(app_data, data_progress)
+			packet = STPPacket(payload, seq_num, ack_num, ack=False, syn=False, fin=False)
 			# pass packet through PLD
 			result = pld.exe_pld()
 			if result == True:
 				# TIMER = tracking the oldest unacknowledged segment
-				if sender.curr_time == 0:
-					sender.clock_time()
-					print("<<< TIMER STARTED = {} >>>".format(sender.curr_time))
+				if sender.start_time == 0:
+					sender.start_timer()
+					print("<<< TIMER STARTED = {} >>>".format(sender.start_time))
 				print("PACKET SENT SUCCESSFULLY")
 				sender.udp_send(packet); num_unacked += 1
 				seq_num += len(payload)
@@ -284,9 +301,12 @@ else:
 				print("PACKET DROPPED")
 				num_dropped += 1
 				sender.update_log("drop", 'D', packet)
-				sender.retransmit(packet); #num_unacked += 1
-				seq_num += len(payload)
-				num_retransmitted += 1
+				# store packet for retransmission
+				pkt_store[sender.prev_time] = packet
+				#sender.retransmit(packet); #num_unacked += 1
+				#seq_num += len(payload)
+				#num_retransmitted += 1
+				continue
 			# update data progress and seq_num
 			data_progress += len(payload)
 			# wait for RCV ack
@@ -295,11 +315,11 @@ else:
 			sender.update_log("rcv", 'A', ack_pkt)
 			ack_num += len(ack_pkt.data)
 			if ack_pkt.ack == True and ack_pkt.ack_num > sendbase:
-				print("<<< ACK RECEIVED >>>")
+				print("<<< DATA ACK RECEIVED >>>")
 				num_unacked -= 1
 				sendbase = ack_pkt.ack_num
 				if num_unacked == 0:
-					sender.clock_time()
+					sender.start_timer()
 			# whole file has been sent, begin close connection
 			if data_progress == data_len:
 				# send FIN
