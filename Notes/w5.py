@@ -10,4 +10,3 @@ With RDT, transferred data bits are: 'not corrupted' | 'not lost' | 'delivered i
 'rdt_rcv()' = Called when packet arrives to receiver-side channel
 'deliver_data()' = Delivers the data to receiver-side app
 
-
