@@ -45,14 +45,17 @@ class RoutingPerf:
 		self.topology = top
 		self.workload = work
 
+	# init graph topology
 	def initTopology(self):
 		f = open(self.topology, "r")
 		return None
 
+	# init graph workload
 	def initWorkload(self):
 		f = open(self.workload, "r")
 		return None
 
+	# display graph nodes, links, link delay values, link capacity, curr link load
 	def showGraph(self):
 		for n in self.graph.nodes:
 			print("router = {}".format(n))
