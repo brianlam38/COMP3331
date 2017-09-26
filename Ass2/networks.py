@@ -22,18 +22,21 @@ class Graph:
 
 	# add a new link
 	# !neighbour = infinite delay
-	def addEdge(self, from_n, to_n, delay, capacity, active):
+	def addEdge(self, from_n, to_n, delay, capacity):
 		# init link
 		self.edges[from_n].append(to_n)
 		self.edges[to_n].append(from_n)
 		# init link delay
 		self.delays[(from_n, to_n)] = delay
 		self.delays[(to_n, from_n)] = delay
-		# init link capacity and load
+		# init link capacity
 		self.cap[(from_n, to_n)] = capacity
 		self.cap[(to_n, from_n)] = capacity
-		self.load[(from_n, to_n)] = active
-		self.load[(to_n, from_n)] = active
+
+		print("delay: {} | capacity: {}".format(delay, capacity))
+
+		#self.load[(from_n, to_n)] = active
+		#self.load[(to_n, from_n)] = active
 
 """
 Routing Performance Methods
@@ -45,10 +48,17 @@ class RoutingPerf:
 		self.topology = top
 		self.workload = work
 
-	# init graph topology
-	def initTopology(self):
+	# init graph topology: routers xy, link delay, link capacity
+	def initTopCap(self):
 		f = open(self.topology, "r")
-		return None
+		data = f.readlines()
+		for line in data:
+			line = line.split()
+			x = line[0]; y = line[1]; delay = line[2]; cap = line[2]
+			#print("x = {}, y = {}, delay = {}, cap = {}".format(x, y, delay, cap))
+			self.graph.addNode(x)
+			self.graph.addNode(y)
+			self.graph.addEdge(x, y, delay, cap)
 
 	# init graph workload
 	def initWorkload(self):
@@ -77,18 +87,19 @@ if __name__ == '__main__':
 		# grab argument objects
 		NETWORK_SCHEME, ROUTING_SCHEME, TOPOLOGY_FILE, WORKLOAD_FILE, PACKET_RATE = sys.argv[1:]
 		r = RoutingPerf(graph, TOPOLOGY_FILE, WORKLOAD_FILE)
-		r.initTopology()
-		#r.initWorkload()
+		# init Topology and Capacity values
+		r.initTopCap()
+		#r.initWorkload()	--> WORK ON THIS NEXT
 
 		# init graph, nodes, edge and link values
-		r.graph.addNode('A')
-		r.graph.addNode('B')
-		r.graph.addNode('C')
-		r.graph.addNode('D')
-		r.graph.addEdge('A', 'B', 100, 10, 1)
-		r.graph.addEdge('B', 'C', 200, 20, 2)
-		r.graph.addEdge('C', 'D', 300, 30, 3)
-		r.showGraph()
+		#r.graph.addNode('A')
+		#r.graph.addNode('B')
+		#r.graph.addNode('C')
+		#r.graph.addNode('D')
+		#r.graph.addEdge('A', 'B', 100, 10, 1)
+		#r.graph.addEdge('B', 'C', 200, 20, 2)
+		#r.graph.addEdge('C', 'D', 300, 30, 3)
+		#r.showGraph()
 
 
 
