@@ -33,10 +33,9 @@ class Graph:
 		self.cap[(from_n, to_n)] = capacity
 		self.cap[(to_n, from_n)] = capacity
 
-		print("delay: {} | capacity: {}".format(delay, capacity))
-
-		#self.load[(from_n, to_n)] = active
-		#self.load[(to_n, from_n)] = active
+	#def updateLoadMethod(self) --> NOT STARTED
+		# method to update current load on link,
+		# depending on currtime / active time of link
 
 """
 Routing Performance Methods
@@ -48,7 +47,7 @@ class RoutingPerf:
 		self.topology = top
 		self.workload = work
 
-	# init graph topology: routers xy, link delay, link capacity
+	# init graph topology: routers, delay, capacity
 	def initTopCap(self):
 		f = open(self.topology, "r")
 		data = f.readlines()
@@ -60,18 +59,18 @@ class RoutingPerf:
 			self.graph.addNode(y)
 			self.graph.addEdge(x, y, delay, cap)
 
-	# init graph workload
-	def initWorkload(self):
-		f = open(self.workload, "r")
+	# init VC requests
+	def startRequests(self):
 		return None
 
 	# display graph nodes, links, link delay values, link capacity, curr link load
+	# NOTE: curr link load set to None since load methods are not implemented yet
 	def showGraph(self):
 		for n in self.graph.nodes:
 			print("router = {}".format(n))
 			for e in self.graph.edges[n]:
 				print("nb: {} | delay: {} | capacity: {} | load: {}" \
-				.format(e, self.graph.delays[(n, e)], self.graph.cap[(n, e)], self.graph.load[(n, e)]))
+				.format(e, self.graph.delays[(n, e)], self.graph.cap[(n, e)], None))
 			print("-----------------")
 		return None
 
@@ -83,23 +82,21 @@ if __name__ == '__main__':
 	if len(sys.argv) != num_args:
 		print("Usage: ./networks.py NETWORK_SCHEME ROUTING_SCHEME TOPOLOGY_FILE WORKLOAD_FILE PACKET_RATE")
 	else:
+		# empty graph
 		graph = Graph()
+		
 		# grab argument objects
 		NETWORK_SCHEME, ROUTING_SCHEME, TOPOLOGY_FILE, WORKLOAD_FILE, PACKET_RATE = sys.argv[1:]
 		r = RoutingPerf(graph, TOPOLOGY_FILE, WORKLOAD_FILE)
-		# init Topology and Capacity values
+		
+		# init nodes, links, delay and capacity values
 		r.initTopCap()
-		#r.initWorkload()	--> WORK ON THIS NEXT
 
-		# init graph, nodes, edge and link values
-		#r.graph.addNode('A')
-		#r.graph.addNode('B')
-		#r.graph.addNode('C')
-		#r.graph.addNode('D')
-		#r.graph.addEdge('A', 'B', 100, 10, 1)
-		#r.graph.addEdge('B', 'C', 200, 20, 2)
-		#r.graph.addEdge('C', 'D', 300, 30, 3)
-		#r.showGraph()
+		# test
+		r.showGraph()
+
+		# start virtual connection requests
+		r.startRequests()
 
 
 
