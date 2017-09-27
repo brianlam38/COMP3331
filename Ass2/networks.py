@@ -71,39 +71,83 @@ class RoutingPerf:
 		return None
 
 """
-Shortest Hop Path (SHP)
+Shortest Hop (SHP)
 """
-def dijsktra(graph, initial):
-	visited = {initial: 0}
-	path = {}
-
+def ShortestHopPath(graph, source):
+	# init visited = src, path, nodes
+	visited = {source: 0}
+	pred = {}
 	nodes = set(graph.nodes)
 
+	# while nodes not empty
 	while nodes: 
+		curr_node = None
+		# grab neighbour node with lowest cost path
+		for n in nodes:
+			if n in visited:
+				# init curr = src node
+				if curr_node is None:
+					curr_node = n
+				# update lowest cost neighbour
+				elif visited[n] < visited[curr_node]:
+					curr_node = n
+		if curr_node is None:
+			break
+
+		# remove curr node, grab curr delay so far
+		nodes.remove(curr_node)
+		curr_delay = visited[curr_node]
+
+		# check connected edges
+		for e in graph.edges[curr_node]:
+			delay = curr_delay + 1
+			# if edge !visited, update new path
+			if e not in visited:
+				visited[e] = delay
+				pred[e] = curr_node
+
+	print("MST {}".format(pred))
+	print("SHP FROM {} {}\n".format(source, visited))
+	return visited, pred
+
+"""
+Shortest Delay Path (SDP)
+"""
+def ShortestDelayPath(graph, source):
+	# init visited = src, path, nodes
+	visited = {source: 0}
+	pred = {}
+	nodes = set(graph.nodes)
+
+	while True: 
 		min_node = None
-		for node in nodes:
-			# if visited,
-			if node in visited:
+		# grab node with min delay
+		for n in nodes:
+			if n in visited:
 				if min_node is None:
-					min_node = node
-				elif visited[node] < visited[min_node]:
-					min_node = node
-
+					min_node = n
+				elif visited[n] < visited[min_node]:
+					min_node = n
+		# all nodes visited, exit djikstras
 		if min_node is None:
-				break
+			break
 
+		# grab min_node delay + remove min_node from set
 		nodes.remove(min_node)
-		current_weight = visited[min_node]
+		curr_delay = visited[min_node]
 
-		for edge in graph.edges[min_node]:
-			weight = current_weight + graph.delays[(min_node, edge)]
-			if edge not in visited or weight < visited[edge]:
-				visited[edge] = weight
-				path[edge] = min_node
+		# edge relaxation
+		for e in graph.edges[min_node]:
+			delay = curr_delay + graph.delays[(min_node, e)]
+			# if link delay < known link delay, update new path
+			if e not in visited or delay < visited[e]:
+				visited[e] = delay
+				pred[e] = min_node
 
-	print("\nvisited\n{}\n".format(visited))
-	print("\npath\n{}\n".format(path))
-	return visited, path
+
+	print("MST {}".format(pred))
+	print("SDP FROM {} {}\n".format(source, visited))
+	return visited, pred
 
 """
 Main Function
@@ -129,7 +173,13 @@ if __name__ == '__main__':
 		# start virtual connection requests
 		r.startRequests()
 
-		d = dijsktra(r.graph, 'A')
+		# Select scheme
+		if ROUTING_SCHEME == "SHP":
+			print("[ SCHEME: SHORTEST HOP PATH ]")
+			SHP = ShortestHopPath(r.graph, 'A')
+		elif ROUTING_SCHEME == "SDP":
+			print("[ SCHEME: SHORTEST DELAY PATH ]")
+			SDP = ShortestDelayPath(r.graph, 'A')
 
 
 
