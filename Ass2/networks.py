@@ -9,7 +9,6 @@ from collections import *
 class Graph:
 
 	def __init__(self):
-		#self.num_nodes = 0
 		self.nodes = set()					# switches/routers
 		self.edges = defaultdict(list)		# links
 		self.delays = {}					# link delays
@@ -33,12 +32,9 @@ class Graph:
 		self.cap[(from_n, to_n)] = capacity
 		self.cap[(to_n, from_n)] = capacity
 
-	#def updateLoadMethod(self) --> NOT STARTED
-		# method to update current load on link,
-		# depending on currtime / active time of link
 
 """
-Routing Performance Methods
+Routing Performance Program
 """
 class RoutingPerf:
 
@@ -48,7 +44,7 @@ class RoutingPerf:
 		self.workload = work
 
 	# init graph topology: routers, delay, capacity
-	def initTopCap(self):
+	def initTopology(self):
 		f = open(self.topology, "r")
 		data = f.readlines()
 		for line in data:
@@ -57,14 +53,14 @@ class RoutingPerf:
 			#print("x = {}, y = {}, delay = {}, cap = {}".format(x, y, delay, cap))
 			self.graph.addNode(x)
 			self.graph.addNode(y)
-			self.graph.addEdge(x, y, delay, cap)
+			self.graph.addEdge(x, y, int(delay), int(cap))
 
 	# init VC requests
 	def startRequests(self):
 		return None
 
 	# display graph nodes, links, link delay values, link capacity, curr link load
-	# NOTE: curr link load set to None since load methods are not implemented yet
+	# NOTE: curr link load set to None since workload methods are not implemented yet
 	def showGraph(self):
 		for n in self.graph.nodes:
 			print("router = {}".format(n))
@@ -73,6 +69,41 @@ class RoutingPerf:
 				.format(e, self.graph.delays[(n, e)], self.graph.cap[(n, e)], None))
 			print("-----------------")
 		return None
+
+"""
+Shortest Hop Path (SHP)
+"""
+def dijsktra(graph, initial):
+	visited = {initial: 0}
+	path = {}
+
+	nodes = set(graph.nodes)
+
+	while nodes: 
+		min_node = None
+		for node in nodes:
+			# if visited,
+			if node in visited:
+				if min_node is None:
+					min_node = node
+				elif visited[node] < visited[min_node]:
+					min_node = node
+
+		if min_node is None:
+				break
+
+		nodes.remove(min_node)
+		current_weight = visited[min_node]
+
+		for edge in graph.edges[min_node]:
+			weight = current_weight + graph.delays[(min_node, edge)]
+			if edge not in visited or weight < visited[edge]:
+				visited[edge] = weight
+				path[edge] = min_node
+
+	print("\nvisited\n{}\n".format(visited))
+	print("\npath\n{}\n".format(path))
+	return visited, path
 
 """
 Main Function
@@ -90,13 +121,15 @@ if __name__ == '__main__':
 		r = RoutingPerf(graph, TOPOLOGY_FILE, WORKLOAD_FILE)
 		
 		# init nodes, links, delay and capacity values
-		r.initTopCap()
+		r.initTopology()
 
 		# test
 		r.showGraph()
 
 		# start virtual connection requests
 		r.startRequests()
+
+		d = dijsktra(r.graph, 'A')
 
 
 
