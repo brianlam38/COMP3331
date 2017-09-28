@@ -121,7 +121,7 @@ def ShortestDelayPath(graph, source):
 
 	while True: 
 		min_node = None
-		# grab node with min delay
+		# pick unvisited node with lowest delay
 		for n in nodes:
 			if n in visited:
 				if min_node is None:
@@ -136,6 +136,7 @@ def ShortestDelayPath(graph, source):
 		nodes.remove(min_node)
 		curr_delay = visited[min_node]
 
+		# calculate distance to each unvisited neighbour
 		# edge relaxation
 		for e in graph.edges[min_node]:
 			delay = curr_delay + graph.delays[(min_node, e)]
