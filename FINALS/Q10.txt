@@ -1,0 +1,9 @@
+Q10.)
+
+a)
+C'd packet would arrive successfully at D as D is out of range of A's transmission to C.
+However, A's transmission to B will fail as
+
+b)
+
+

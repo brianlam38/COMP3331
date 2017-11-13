@@ -1,0 +1,7 @@
+a)
+
+He needs to recompute the checksum for the new packet design that is sent by his NAT to the internet.
+
+b)
+
+Something about port 80

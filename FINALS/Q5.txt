@@ -1,0 +1,28 @@
+a)
+
+     A
+     AE AD AC 0
+(AC) CD	      2
+(AD) DB DF    2
+(AE) EB	      2
+(A->EB) DB    2+1 = 3
+(A->DF)       2+3 = 5
+
+b)
+
+A - Distance Vector Table
+------------------
+neigh A B C D E F
+------------------
+to A  0 3 2 2 2 5
+to B  3 0 5 3 1 6
+to C  2 5 0 4 4 7
+to D  2 3 4 0 4 3
+to E  2 1 4 4 0 7
+
+* = infinity
+
+c)
+
+Count-to-infinity
+
