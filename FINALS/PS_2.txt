@@ -1,0 +1,122 @@
+NETWORK LAYER PROBLEM SET
+
+Q1.)
+Max 500 bytes of data.
+A node generates TCP segment of size 1,000 bytes.
+How many IP packets are transmitted to carry this TCP segment?
+
+3 IP packets are needed.
+
+1,000 data bytes + 20 TCP header = 1,020 total bytes for TCP
+
+20 IP Header + 500 data = 520bytes IP #1
+20 IP Header + 500 data = 520bytes IP #2
+20 IP Header + 20 remaining data = 40 bytes IP #3
+
+Q2.)
+Diff between routing and forwarding?
+
+Routing finding a path to the next-hop router in order to reach the destination / finding
+the route from the source -> destination.
+Forwarding is finding where to direct the incoming packet to the outgoing interface. (inside a router)
+
+Q3.)
+Not sure
+Learn more on Virtual Circuits
+
+Q4.)
+8-bit host addresses: 0000 0000 - 1111 1111
+
+Int #0: 0000 0000 - 0011 1111
+Int #1: 0100 0000 - 0111 1111
+Int #2: 1000 0000 - 1011 1111
+Int #3: 1100 0000 - 1111 1111
+
+Q5.)
+
+Routing Table:
+128.59.28.0/22 | Port 0
+128.59.28.0/23 | Port 1
+128.59.28.0/24 | Port 2
+
+XXXXXXXX.XXXXXXXX.00011101.00000000
+		          ^^^
+
+Packet arrives with IP 128.59.29.18
+The longest-prefix match will be Port #2
+
+ANSWER PROVIDED SEEMS TO BE INCORRECT
+
+Q6.)
+Datagrams are limited to 1500 bytes (including header) between A->B
+20byte IP header + 20byte TCP header.
+
+1500 bytes - 20 TCP header - 20 IP header = 1460bytes of data max
+
+4,000,000 / 1460 bytes = 2,740 packets
+
+NOTE: No fragmentation is used here, therefore each IP datagram also contains a TCP header.
+(different to Q1 where data was fragmented, so just one TCP header across all the datagrams)
+
+Q7.)
+Subnet with prefix 101.101.101.64/26
+
+            IP = 01100101 01100101 01100101 01000000
+subnet 26 bits = 11111111 11111111 11111111 11000000
+                 —————————————————
+                 01100101 01100101 01100101 01000000
+
+Size of subnet = 00111111 = 63
+Therefore range = 101.101.101.64 -> 101.101.101.64+63
+
+IP address within this subnet = 101.101.101.65 or anything up to 101.101.101.127
+
+Q8.)
+ISP owns 101.101.128/17
+It wants to create four subnets, with each block having the same number of IP addresses.
+Which prefixes form the four subnets?
+
+101.101.128.0/17
+
+Network part = 01100101 01100101 01111111 00000000
+	  mask = 11111111 11111111 10000000 00000000
+	———————————————————————-----------------------
+
+Size of network = ~mask = 00000000 00000000 01111111 11111111
+		    = 127
+
+127/4 = 32 = 00100000
+Therefore Prefix = 19
+
+#1 101.101.128.0/19
+#2 101.101.160.0/19
+#3 101.101.192.0/19
+#4 101.101.224.0/19
+
+Q9.)
+3,000 byte datagram into a link
+MTU 500 bytes
+Original datagram ID = 422
+
+How many fragments?
+
+3000 - 20 header = 2980 bytes
+2980 / 480 = 6.2… = 7 packets
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

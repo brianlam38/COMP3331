@@ -1,0 +1,77 @@
+Q1.)
+Select Repeat makes more efficient use of network bandwidth, as during a packet loss event,
+it only retransmits lost packet P, whereas with Go-Back-N, it will retransmit all packets
+from packet P onwards, regardless of if they had successfully arrived or not.
+
+Q2.)
+Sender sends data infrequently.
+NAK = sent when receiver knows of packet loss / error
+ACK = acknowledgement of successful packet receipt
+
+NAK would NOT be preferable to an ACK-only protocol, because if the sender sends infrequently,
+this means that the receiver will only know if a packet has been lost after a "long" period of
+waiting time. They would need to receive at t0, wait t1 - packet drop, wait t2 before knowing
+that there is a missing packet and then sending a NAK.
+
+Whereas with an ACK-only protocol, the sender would know of a packet loss event a lot earlier
+at t0 + timeout as no ACK has come.
+
+On the other hand, if the sender sends data very frequently and packet-loss is infrequent,
+a NAK-only protocol would benefit as ACKs won't need to be frequently sent, only NAKs when
+something goes wrong. The receiver would also know of a packet-loss event much quicker since
+the sender is sending frequently.
+
+Q4.)
+If TCP provides fair sharing at the bottleneck link, that means eventually, over the long-term
+each receiver will see a similar level of throughput at the link.
+
+If RTTs are very different for each sender, it could lead to unfairness, as TCP favours smaller
+RTT's. A sender with lower RTT = higher transmission rate, whereas sender with higher RTT = lower transmission rate.
+This would result in unfair sharing of the link.
+
+Q5.)
+RTT London -> Sydney 120ms.
+All links have 155 Mbps rate
+How much data can fit in the pipe?
+
+Convert to seconds:
+120ms = 0.12s
+
+Convert to bytes:
+155Mb = 155 x 10^6 bits = 155,000,000 bits
+155,000,000 / 8 = 19,375,000bps
+
+Adjust to RTT:
+19,375,000 * 0.12 = 2,325,000 bytes
+
+Therefore, 2,235,000 bytes can fit in the pipe.
+
+Q6.)
+(a) Slow Start = T1 -> T6
+(b) Congestion Avoidance = T6 -> T16 | T17 -> T22
+(c) Loss is detected by a DupACK
+(d) Loss is detected by a Timeout
+(e) SSThresh = 32, as after T32, CWND increases consistently (when CWND >= SSThresh)
+(f) At T18, this is loss from a DupACK, therefore SSThresh = CWND/2 = 16
+(g) At T24, this is loss from a timeout, therefore SSThresh = CWND/2 = 8
+(h)
+(i) At T26, if a loss occurs from DupACK, CWND = CWND/2 = 8/2 = 4
+                                        SSThresh = CWND/2 = 8/4 = 2
+
+
+Q10.)
+1011 0101 1010 1000
+0101 1001 0000 0101
+-------------------
+0000 1110 1010 1110
+
+UDP checksum should be:
+1111 0001 0101 0001
+1101 0001 0101 0001
+  ^
+ bit-error, therefore the receiver will detect an error.
+
+Q11.)
+
+seq 90 , seq 110
+

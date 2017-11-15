@@ -1,0 +1,12 @@
+Q1.)
+
+Link-Layer Protocol Provides:
+- Framing (header + datagram)
+- Link-layer access
+- RDT with low bit-error in some links e.g. fiber
+- Flow control: Pacing between adj and receiving nodes
+- Error detection: CRC
+- Error correction
+- Full-duplex
+
+Q2.)
